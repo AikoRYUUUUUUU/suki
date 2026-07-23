@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel Administrativo</title>
+</head>
+<body>
+    <h1>Adicionar Mangá</h1>
+    <form action="/add_manga" method="post">
+        <label for="title">Título:</label>
+        <input type="text" id="title" name="title" required><br><br>
+
+        <label for="description">Descrição:</label>
+        <textarea id="description" name="description" required></textarea><br><br>
+
+        <label for="tags">Tags:</label>
+        <select id="tags" name="tag_ids" multiple>
+            {% for tag in tags %}
+                <option value="{{ tag['id'] }}">{{ tag['name'] }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="author">Autor:</label>
+        <select id="author" name="author_id">
+            {% for author in authors %}
+                <option value="{{ author['id'] }}">{{ author['name'] }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label for="group">Grupo:</label>
+        <select id="group" name="group_id">
+            {% for group in groups %}
+                <option value="{{ group['id'] }}">{{ group['name'] }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <button type="submit">Adicionar Mangá</button>
+    </form>
+</body>
+</html>
