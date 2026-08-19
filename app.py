@@ -6,6 +6,7 @@ import secrets
 import shutil
 import subprocess
 import time
+from datetime import date
 from functools import wraps
 from pathlib import Path
 
@@ -32,6 +33,7 @@ WSGI_FILE_PATH = os.environ.get("WSGI_FILE_PATH")
 
 csrf = CSRFProtect(app)
 limiter = Limiter(get_remote_address, app=app, default_limits=[])
+app.jinja_env.globals["format_number"] = mangadb.format_number
 
 with app.app_context():
     mangadb.init_db()
@@ -231,18 +233,12 @@ def admin():
 @app.route("/admin/mangas/new", methods=["GET"])
 @login_required
 def new_manga_form():
-    return render_template(
-        "admin_new_manga.html",
-        tags=mangadb.get_tags(), authors=mangadb.get_authors(), groups=mangadb.get_groups(),
-        error=None,
-    )
+    return render_template("admin_new_manga.html", groups=mangadb.get_groups(), error=None)
 
 
 def render_new_manga_error(message):
     return render_template(
-        "admin_new_manga.html",
-        tags=mangadb.get_tags(), authors=mangadb.get_authors(), groups=mangadb.get_groups(),
-        error=message,
+        "admin_new_manga.html", groups=mangadb.get_groups(), error=message,
     ), 400
 
 
@@ -256,8 +252,8 @@ def preview_manga():
             title=request.form.get("title"),
             synopsis=request.form.get("synopsis"),
             status=request.form.get("status"),
-            tag_ids=request.form.getlist("tag_ids"),
-            author_id=request.form.get("author_id"),
+            tags=request.form.get("tags"),
+            author=request.form.get("author"),
             group_id=request.form.get("group_id"),
             year=request.form.get("year"),
             rating=request.form.get("rating"),
@@ -275,11 +271,6 @@ def preview_manga():
         cover_token = save_pending_cover(cover_file, ext)
         cover_preview_url = f"/static/assets/covers/_pending/{cover_token}.{ext}"
 
-    tags_by_id = {t["id"]: t["name"] for t in mangadb.get_tags()}
-    tag_names = [tags_by_id[t] for t in fields["tag_ids"] if t in tags_by_id]
-    author_name = next(
-        (a["name"] for a in mangadb.get_authors() if a["id"] == fields["author_id"]), None
-    )
     group_name = next(
         (g["name"] for g in mangadb.get_groups() if g["id"] == fields["group_id"]), None
     )
@@ -289,7 +280,7 @@ def preview_manga():
         fields=fields,
         title_original=(request.form.get("title_original") or "").strip(),
         artist=(request.form.get("artist") or "").strip(),
-        tag_names=tag_names, author_name=author_name, group_name=group_name,
+        tag_names=fields["tag_names"], author_name=fields["author"] or None, group_name=group_name,
         cover_preview_url=cover_preview_url, cover_token=cover_token,
     )
 
@@ -302,8 +293,8 @@ def create_manga():
             title=request.form.get("title"),
             synopsis=request.form.get("synopsis"),
             status=request.form.get("status"),
-            tag_ids=request.form.getlist("tag_ids"),
-            author_id=request.form.get("author_id"),
+            tags=request.form.get("tags"),
+            author=request.form.get("author"),
             group_id=request.form.get("group_id"),
             title_original=request.form.get("title_original"),
             artist=request.form.get("artist"),
@@ -375,6 +366,7 @@ def new_chapter_form(manga_id):
         "admin_new_chapter.html",
         manga_id=manga_id, manga_title=title,
         next_number=mangadb.format_number(mangadb.next_chapter_number(manga_id)),
+        today=date.today().isoformat(),
         error=None,
     )
 
@@ -409,12 +401,14 @@ def create_chapter(manga_id):
             "admin_new_chapter.html",
             manga_id=manga_id, manga_title=manga_title,
             next_number=mangadb.format_number(mangadb.next_chapter_number(manga_id)),
+            today=date.today().isoformat(),
             error=message,
         ), status
 
     try:
-        number_val, title = mangadb.validate_chapter_fields(
-            request.form.get("number"), request.form.get("title")
+        number_val, title, release_date = mangadb.validate_chapter_fields(
+            request.form.get("number"), request.form.get("title"),
+            request.form.get("release_date"), manga_id,
         )
     except mangadb.ValidationError as e:
         return render_error(str(e))
@@ -436,7 +430,7 @@ def create_chapter(manga_id):
     try:
         mangadb.add_chapter(
             manga_id=manga_id, chapter_id=chapter_id, number_val=number_val, title=title,
-            release_date=request.form.get("release_date"), page_paths=page_paths,
+            release_date=release_date, page_paths=page_paths,
         )
     except mangadb.ValidationError as e:
         shutil.rmtree(
@@ -446,6 +440,119 @@ def create_chapter(manga_id):
         return render_error(str(e))
 
     return redirect(url_for("admin"))
+
+
+@app.route("/admin/mangas/<manga_id>/chapters", methods=["GET"])
+@login_required
+def chapters_list(manga_id):
+    title = mangadb.get_manga_title(manga_id)
+    if title is None:
+        abort(404)
+    return render_template(
+        "admin_chapters.html",
+        manga_id=manga_id, manga_title=title,
+        chapters=mangadb.get_manga_chapters(manga_id),
+    )
+
+
+def render_edit_chapter(manga_id, manga_title, chapter, error=None, status=200):
+    pages = [{**p, "url": mangadb.static_url(p["image_path"])} for p in chapter["pages"]]
+    return render_template(
+        "admin_edit_chapter.html",
+        manga_id=manga_id, manga_title=manga_title, chapter=chapter, pages=pages, error=error,
+    ), status
+
+
+@app.route("/admin/mangas/<manga_id>/chapters/<chapter_id>/edit", methods=["GET"])
+@login_required
+def edit_chapter_form(manga_id, chapter_id):
+    chapter = mangadb.get_chapter_edit_data(manga_id, chapter_id)
+    if chapter is None:
+        abort(404)
+    return render_edit_chapter(manga_id, mangadb.get_manga_title(manga_id), chapter)
+
+
+def append_chapter_pages(manga_id, chapter_id, files, extensions):
+    """Salva páginas novas adicionadas na edição. A pasta do capítulo já pode ter
+    arquivos de antes, então (diferente de save_chapter_pages) usa nome por token
+    aleatório em vez de posição, pra nunca colidir com um arquivo já existente."""
+    folder = os.path.join(app.root_path, "static", "assets", "pages", manga_id, chapter_id)
+    os.makedirs(folder, exist_ok=True)
+    paths = []
+    for file, ext in zip(files, extensions):
+        filename = f"{secrets.token_hex(8)}.{ext}"
+        file.save(os.path.join(folder, filename))
+        paths.append(f"assets/pages/{manga_id}/{chapter_id}/{filename}")
+    return paths
+
+
+@app.route("/admin/mangas/<manga_id>/chapters/<chapter_id>/edit", methods=["POST"])
+@login_required
+def update_chapter(manga_id, chapter_id):
+    chapter = mangadb.get_chapter_edit_data(manga_id, chapter_id)
+    if chapter is None:
+        abort(404)
+    manga_title = mangadb.get_manga_title(manga_id)
+
+    try:
+        number_val, title, release_date = mangadb.validate_chapter_fields(
+            request.form.get("number"), request.form.get("title"),
+            request.form.get("release_date"), manga_id, exclude_chapter_id=chapter_id,
+        )
+    except mangadb.ValidationError as e:
+        return render_edit_chapter(manga_id, manga_title, chapter, error=str(e), status=400)
+
+    new_files = [f for f in request.files.getlist("new_pages") if f and f.filename]
+    new_extensions = []
+    for file in new_files:
+        ext = sniff_image_extension(file)
+        if ext is None:
+            return render_edit_chapter(
+                manga_id, manga_title, chapter, status=400,
+                error=f"Arquivo '{file.filename}' não é uma imagem válida (png, jpg, webp).",
+            )
+        new_extensions.append(ext)
+
+    kept_pages = []  # (posição digitada, page_id) - só das que não foram marcadas pra remover
+    removed_ids = []
+    for p in chapter["pages"]:
+        if request.form.get(f"remove_{p['id']}"):
+            removed_ids.append(p["id"])
+            continue
+        try:
+            pos = int(request.form.get(f"pos_{p['id']}", p["position"]))
+        except (TypeError, ValueError):
+            pos = p["position"]
+        kept_pages.append((pos, p["id"]))
+
+    if not kept_pages and not new_files:
+        return render_edit_chapter(
+            manga_id, manga_title, chapter, status=400,
+            error="O capítulo precisa de pelo menos uma página.",
+        )
+
+    kept_pages.sort(key=lambda t: t[0])  # sort estável: empate mantém a ordem original
+
+    removed_pages = mangadb.get_pages_by_ids(removed_ids)
+    new_paths = append_chapter_pages(manga_id, chapter_id, new_files, new_extensions)
+
+    mangadb.update_chapter_metadata(chapter_id, number_val, title, release_date)
+
+    for old in removed_pages:
+        full_path = os.path.join(app.root_path, "static", *old["image_path"].split("/"))
+        if os.path.exists(full_path):
+            os.remove(full_path)
+    mangadb.delete_pages_by_ids(removed_ids)
+
+    position = 0
+    for _, page_id in kept_pages:
+        mangadb.set_page_position(page_id, position)
+        position += 1
+    for path in new_paths:
+        mangadb.insert_page(chapter_id, position, path)
+        position += 1
+
+    return redirect(url_for("chapters_list", manga_id=manga_id))
 
 
 if __name__ == "__main__":

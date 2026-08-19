@@ -60,19 +60,12 @@
       <input type="text" id="artist" name="artist">
 
       <label for="tags">Tags</label>
-      <select id="tags" name="tag_ids" multiple>
-        {% for tag in tags %}
-          <option value="{{ tag['id'] }}">{{ tag['name'] }}</option>
-        {% endfor %}
-      </select>
+      <input type="text" id="tags" name="tags" placeholder="Ação, Drama, Sobrenatural">
+      <p class="admin-hint">Separe por vírgula. Tags novas são criadas automaticamente.</p>
 
       <label for="author">Autor</label>
-      <select id="author" name="author_id">
-        <option value="">—</option>
-        {% for author in authors %}
-          <option value="{{ author['id'] }}">{{ author['name'] }}</option>
-        {% endfor %}
-      </select>
+      <input type="text" id="author" name="author" placeholder="Nome do autor">
+      <p class="admin-hint">Autor novo é criado automaticamente.</p>
 
       <label for="group">Grupo</label>
       <select id="group" name="group_id">

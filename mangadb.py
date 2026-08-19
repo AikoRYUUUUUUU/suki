@@ -2,6 +2,7 @@ import os
 import re
 import sqlite3
 import unicodedata
+from datetime import date
 
 DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "mangadb.db"))
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
@@ -100,6 +101,41 @@ def next_chapter_number(manga_id):
     return row["max_number"] + 1
 
 
+def get_manga_chapters(manga_id):
+    conn = get_connection()
+    rows = [dict(r) for r in conn.execute("""
+        SELECT c.id, c.number, c.title, c.release_date, COUNT(p.id) AS page_count
+        FROM chapters c
+        LEFT JOIN pages p ON p.chapter_id = c.id
+        WHERE c.manga_id = ?
+        GROUP BY c.id
+        ORDER BY c.number
+    """, (manga_id,))]
+    conn.close()
+    return rows
+
+
+def get_or_create_tag(conn, name):
+    """Opera na conexão do chamador (nunca abre a própria) - assim fica dentro da mesma
+    transação de quem está inserindo o mangá, evitando lock de escritor concorrente do
+    SQLite entre duas conexões abertas ao mesmo tempo."""
+    name = name.strip()
+    row = conn.execute("SELECT id FROM tags WHERE lower(name) = lower(?)", (name,)).fetchone()
+    if row:
+        return row["id"]
+    cur = conn.execute("INSERT INTO tags (name) VALUES (?)", (name,))
+    return cur.lastrowid
+
+
+def get_or_create_author(conn, name):
+    name = name.strip()
+    row = conn.execute("SELECT id FROM authors WHERE lower(name) = lower(?)", (name,)).fetchone()
+    if row:
+        return row["id"]
+    cur = conn.execute("INSERT INTO authors (name) VALUES (?)", (name,))
+    return cur.lastrowid
+
+
 # ---------- leitura para a API pública (mesmo formato do antigo data/db.json) ----------
 
 def static_url(path):
@@ -173,12 +209,14 @@ class ValidationError(Exception):
     pass
 
 
-def validate_manga_fields(title, synopsis, status, tag_ids, author_id, group_id, year=None, rating=None):
-    """Validação pura (só leituras de existência) - reaproveitada por add_manga e pela
-    rota de preview em app.py, pra não duplicar regra entre as duas."""
+def validate_manga_fields(title, synopsis, status, tags, author, group_id, year=None, rating=None):
+    """Validação pura (só leitura, sem criar nada) - reaproveitada por add_manga e pela
+    rota de preview em app.py, pra não duplicar regra entre as duas. Tags e autor são
+    texto livre (get-or-create acontece só na hora de gravar, em add_manga)."""
     title = (title or "").strip()
     synopsis = (synopsis or "").strip()
     status = (status or "").strip()
+    author = (author or "").strip()
     if not title:
         raise ValidationError("Título é obrigatório.")
     if not synopsis:
@@ -204,58 +242,55 @@ def validate_manga_fields(title, synopsis, status, tag_ids, author_id, group_id,
         if rating_val < 0 or rating_val > 5:
             raise ValidationError("Avaliação deve estar entre 0 e 5.")
 
+    seen = set()
+    tag_names = []
+    for raw in (tags or "").split(","):
+        name = raw.strip()
+        if not name or name.lower() in seen:
+            continue
+        seen.add(name.lower())
+        tag_names.append(name)
+
     conn = get_connection()
     try:
-        author_id_val = None
-        if author_id not in (None, ""):
-            author_id_val = int(author_id)
-            if not conn.execute("SELECT 1 FROM authors WHERE id = ?", (author_id_val,)).fetchone():
-                raise ValidationError("Autor inválido.")
-
         group_id_val = None
         if group_id not in (None, ""):
             group_id_val = int(group_id)
             if not conn.execute("SELECT 1 FROM groups WHERE id = ?", (group_id_val,)).fetchone():
                 raise ValidationError("Grupo inválido.")
-
-        clean_tag_ids = []
-        for tid in (tag_ids or []):
-            if tid in (None, ""):
-                continue
-            tid_val = int(tid)
-            if not conn.execute("SELECT 1 FROM tags WHERE id = ?", (tid_val,)).fetchone():
-                raise ValidationError("Tag inválida.")
-            clean_tag_ids.append(tid_val)
     finally:
         conn.close()
 
     return {
         "title": title, "synopsis": synopsis, "status": status,
         "year": year_val, "rating": rating_val,
-        "author_id": author_id_val, "group_id": group_id_val,
-        "tag_ids": clean_tag_ids,
+        "author": author, "group_id": group_id_val,
+        "tag_names": tag_names,
     }
 
 
-def add_manga(title, synopsis, status, tag_ids, author_id, group_id,
+def add_manga(title, synopsis, status, tags, author, group_id,
               title_original=None, artist=None, year=None, rating=None, cover=None):
-    f = validate_manga_fields(title, synopsis, status, tag_ids, author_id, group_id, year, rating)
+    f = validate_manga_fields(title, synopsis, status, tags, author, group_id, year, rating)
 
     conn = get_connection()
     try:
         manga_id = unique_slug(conn, slugify(f["title"]))
 
+        author_id_val = get_or_create_author(conn, f["author"]) if f["author"] else None
+
         conn.execute("""
             INSERT INTO mangas (id, title, title_original, author_id, artist, group_id,
                                  status, year, rating, cover, synopsis)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (manga_id, f["title"], title_original, f["author_id"], artist, f["group_id"],
+        """, (manga_id, f["title"], title_original, author_id_val, artist, f["group_id"],
               f["status"], f["year"], f["rating"], cover, f["synopsis"]))
 
-        for tid_val in f["tag_ids"]:
+        for name in f["tag_names"]:
+            tag_id = get_or_create_tag(conn, name)
             conn.execute(
                 "INSERT INTO manga_tags (manga_id, tag_id) VALUES (?, ?)",
-                (manga_id, tid_val),
+                (manga_id, tag_id),
             )
 
         conn.commit()
@@ -278,8 +313,10 @@ def update_manga_cover(manga_id, cover_path):
     conn.close()
 
 
-def validate_chapter_fields(number, title):
-    """Validação pura, sem tocar disco/banco - roda antes de qualquer upload de arquivo."""
+def validate_chapter_fields(number, title, release_date, manga_id, exclude_chapter_id=None):
+    """Validação pura, sem tocar disco - roda antes de qualquer upload de arquivo.
+    `exclude_chapter_id` é usado na edição, pra não comparar o capítulo com ele mesmo
+    na checagem de número duplicado."""
     title = (title or "").strip()
     if not title:
         raise ValidationError("Título do capítulo é obrigatório.")
@@ -293,7 +330,27 @@ def validate_chapter_fields(number, title):
     if number_val <= 0:
         raise ValidationError("Número do capítulo deve ser positivo.")
 
-    return number_val, title
+    release_date = (release_date or "").strip()
+    if not release_date:
+        raise ValidationError("Data de publicação é obrigatória.")
+    try:
+        date.fromisoformat(release_date)
+    except ValueError:
+        raise ValidationError("Data de publicação inválida.")
+
+    conn = get_connection()
+    try:
+        query = "SELECT 1 FROM chapters WHERE manga_id = ? AND number = ?"
+        params = [manga_id, number_val]
+        if exclude_chapter_id is not None:
+            query += " AND id != ?"
+            params.append(exclude_chapter_id)
+        if conn.execute(query, params).fetchone():
+            raise ValidationError(f"Já existe um capítulo {format_number(number_val)} nesse mangá.")
+    finally:
+        conn.close()
+
+    return number_val, title, release_date
 
 
 def format_number(number_val):
@@ -343,3 +400,76 @@ def add_chapter(manga_id, chapter_id, number_val, title, release_date, page_path
         conn.commit()
     finally:
         conn.close()
+
+
+# ---------- edição de capítulo existente ----------
+
+def get_chapter_edit_data(manga_id, chapter_id):
+    """Devolve os metadados do capítulo + páginas (ordenadas) se ele pertence a esse
+    mangá, ou None se não existir/pertencer a outro mangá."""
+    conn = get_connection()
+    try:
+        chapter = conn.execute(
+            "SELECT * FROM chapters WHERE id = ? AND manga_id = ?", (chapter_id, manga_id)
+        ).fetchone()
+        if not chapter:
+            return None
+        pages = [dict(r) for r in conn.execute(
+            "SELECT id, position, image_path FROM pages WHERE chapter_id = ? ORDER BY position",
+            (chapter_id,),
+        )]
+        return {
+            "id": chapter["id"], "number": chapter["number"], "title": chapter["title"],
+            "release_date": chapter["release_date"], "pages": pages,
+        }
+    finally:
+        conn.close()
+
+
+def update_chapter_metadata(chapter_id, number_val, title, release_date):
+    conn = get_connection()
+    conn.execute(
+        "UPDATE chapters SET number = ?, title = ?, release_date = ? WHERE id = ?",
+        (number_val, title, release_date, chapter_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_pages_by_ids(page_ids):
+    if not page_ids:
+        return []
+    conn = get_connection()
+    placeholders = ",".join("?" for _ in page_ids)
+    rows = [dict(r) for r in conn.execute(
+        f"SELECT id, position, image_path FROM pages WHERE id IN ({placeholders})", page_ids
+    )]
+    conn.close()
+    return rows
+
+
+def delete_pages_by_ids(page_ids):
+    if not page_ids:
+        return
+    conn = get_connection()
+    placeholders = ",".join("?" for _ in page_ids)
+    conn.execute(f"DELETE FROM pages WHERE id IN ({placeholders})", page_ids)
+    conn.commit()
+    conn.close()
+
+
+def set_page_position(page_id, position):
+    conn = get_connection()
+    conn.execute("UPDATE pages SET position = ? WHERE id = ?", (position, page_id))
+    conn.commit()
+    conn.close()
+
+
+def insert_page(chapter_id, position, image_path):
+    conn = get_connection()
+    conn.execute(
+        "INSERT INTO pages (chapter_id, position, image_path) VALUES (?, ?, ?)",
+        (chapter_id, position, image_path),
+    )
+    conn.commit()
+    conn.close()

@@ -44,6 +44,7 @@
             </div>
             <div class="actions">
               <a class="btn btn-ghost" href="{{ url_for('edit_cover_form', manga_id=m.id) }}">Alterar capa</a>
+              <a class="btn btn-ghost" href="{{ url_for('chapters_list', manga_id=m.id) }}">Capítulos</a>
               <a class="btn btn-ghost" href="{{ url_for('new_chapter_form', manga_id=m.id) }}">Adicionar capítulo</a>
             </div>
           </div>

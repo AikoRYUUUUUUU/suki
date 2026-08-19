@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editar capítulo — Sumi</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="stamp">墨</span> Sumi</a>
+    <nav class="nav-links">
+      <a href="{{ url_for('chapters_list', manga_id=manga_id) }}">← Capítulos</a>
+    </nav>
+  </div>
+</header>
+
+<div class="admin-shell wide">
+  <div class="admin-header">
+    <div>
+      <p class="eyebrow">{{ manga_title }}</p>
+      <h1>Editar capítulo</h1>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    {% if error %}
+      <p class="admin-error">{{ error }}</p>
+    {% endif %}
+
+    <form class="admin-form" action="{{ url_for('update_chapter', manga_id=manga_id, chapter_id=chapter.id) }}" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label for="number">Número do capítulo</label>
+      <input type="text" id="number" name="number" inputmode="decimal" value="{{ format_number(chapter.number) }}" required>
+
+      <label for="title">Título do capítulo</label>
+      <input type="text" id="title" name="title" value="{{ chapter.title }}" required>
+
+      <label for="release_date">Data de publicação</label>
+      <input type="date" id="release_date" name="release_date" value="{{ chapter.release_date or '' }}" required>
+
+      <label>Páginas</label>
+      <p class="admin-hint">Marque "Remover" pra excluir uma página, ou mude o número de ordem pra reordenar.</p>
+      <div class="page-manager">
+        {% for p in pages %}
+          <div class="page-item">
+            <div class="thumb"><img src="{{ p.url }}" alt="Página {{ loop.index }}"></div>
+            <label for="pos_{{ p.id }}">Ordem</label>
+            <input type="number" id="pos_{{ p.id }}" name="pos_{{ p.id }}" value="{{ loop.index }}" min="1">
+            <div class="remove-row">
+              <input type="checkbox" id="remove_{{ p.id }}" name="remove_{{ p.id }}" value="1">
+              <label for="remove_{{ p.id }}" style="margin:0; text-transform:none; font-size:12.5px;">Remover</label>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <label for="new_pages">Adicionar mais páginas</label>
+      <input type="file" id="new_pages" name="new_pages" accept="image/png,image/jpeg,image/webp" multiple>
+      <p class="admin-hint">As novas páginas entram no final da lista (dá pra reordenar depois de salvar).</p>
+
+      <div class="admin-actions">
+        <button type="submit" class="btn btn-primary">Salvar alterações</button>
+        <a class="btn btn-ghost" href="{{ url_for('chapters_list', manga_id=manga_id) }}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>
