@@ -494,63 +494,80 @@ def update_chapter(manga_id, chapter_id):
         abort(404)
     manga_title = mangadb.get_manga_title(manga_id)
 
+    def reject(message, status=400):
+        return render_edit_chapter(manga_id, manga_title, chapter, error=message, status=status)
+
     try:
         number_val, title, release_date = mangadb.validate_chapter_fields(
             request.form.get("number"), request.form.get("title"),
             request.form.get("release_date"), manga_id, exclude_chapter_id=chapter_id,
         )
     except mangadb.ValidationError as e:
-        return render_edit_chapter(manga_id, manga_title, chapter, error=str(e), status=400)
+        return reject(str(e))
 
-    new_files = [f for f in request.files.getlist("new_pages") if f and f.filename]
-    new_extensions = []
-    for file in new_files:
-        ext = sniff_image_extension(file)
+    new_files = request.files.getlist("new_pages")
+    existing_ids = {p["id"] for p in chapter["pages"]}
+
+    # -- interpreta e valida o `order` montado pelo JS, sem confiar em nada do cliente --
+    tokens = [t for t in (request.form.get("order") or "").split(",") if t]
+    seen_existing = set()
+    seen_new = set()
+    final_entries = []  # ("existing", page_id) ou ("new", índice em new_files)
+    for tok in tokens:
+        kind, raw = tok[0], tok[1:]
+        if kind == "e":
+            if not raw.isdigit() or int(raw) not in existing_ids or int(raw) in seen_existing:
+                return reject("Ordem de páginas inválida.")
+            pid = int(raw)
+            seen_existing.add(pid)
+            final_entries.append(("existing", pid))
+        elif kind == "n":
+            if not raw.isdigit() or int(raw) >= len(new_files) or int(raw) in seen_new:
+                return reject("Ordem de páginas inválida.")
+            idx = int(raw)
+            seen_new.add(idx)
+            final_entries.append(("new", idx))
+        else:
+            return reject("Ordem de páginas inválida.")
+
+    if not final_entries:
+        return reject("O capítulo precisa de pelo menos uma página.")
+
+    # só valida (bytes reais) os arquivos que de fato serão usados
+    extensions_by_index = {}
+    for idx in seen_new:
+        ext = sniff_image_extension(new_files[idx])
         if ext is None:
-            return render_edit_chapter(
-                manga_id, manga_title, chapter, status=400,
-                error=f"Arquivo '{file.filename}' não é uma imagem válida (png, jpg, webp).",
-            )
-        new_extensions.append(ext)
+            return reject(f"Arquivo '{new_files[idx].filename}' não é uma imagem válida (png, jpg, webp).")
+        extensions_by_index[idx] = ext
 
-    kept_pages = []  # (posição digitada, page_id) - só das que não foram marcadas pra remover
-    removed_ids = []
-    for p in chapter["pages"]:
-        if request.form.get(f"remove_{p['id']}"):
-            removed_ids.append(p["id"])
-            continue
-        try:
-            pos = int(request.form.get(f"pos_{p['id']}", p["position"]))
-        except (TypeError, ValueError):
-            pos = p["position"]
-        kept_pages.append((pos, p["id"]))
-
-    if not kept_pages and not new_files:
-        return render_edit_chapter(
-            manga_id, manga_title, chapter, status=400,
-            error="O capítulo precisa de pelo menos uma página.",
-        )
-
-    kept_pages.sort(key=lambda t: t[0])  # sort estável: empate mantém a ordem original
-
+    removed_ids = [p["id"] for p in chapter["pages"] if p["id"] not in seen_existing]
     removed_pages = mangadb.get_pages_by_ids(removed_ids)
-    new_paths = append_chapter_pages(manga_id, chapter_id, new_files, new_extensions)
+
+    saved_paths_by_index = {}
+    if seen_new:
+        ordered_indexes = sorted(seen_new)
+        files_to_save = [new_files[i] for i in ordered_indexes]
+        exts_to_save = [extensions_by_index[i] for i in ordered_indexes]
+        saved_paths = append_chapter_pages(manga_id, chapter_id, files_to_save, exts_to_save)
+        saved_paths_by_index = dict(zip(ordered_indexes, saved_paths))
 
     mangadb.update_chapter_metadata(chapter_id, number_val, title, release_date)
 
     for old in removed_pages:
-        full_path = os.path.join(app.root_path, "static", *old["image_path"].split("/"))
-        if os.path.exists(full_path):
-            os.remove(full_path)
+        # só apaga o arquivo do disco se nenhuma outra página (nesse ou noutro
+        # capítulo) ainda aponta pro mesmo caminho - evita apagar imagem em uso
+        if mangadb.count_pages_with_image_path(old["image_path"]) <= 1:
+            full_path = os.path.join(app.root_path, "static", *old["image_path"].split("/"))
+            if os.path.exists(full_path):
+                os.remove(full_path)
     mangadb.delete_pages_by_ids(removed_ids)
 
-    position = 0
-    for _, page_id in kept_pages:
-        mangadb.set_page_position(page_id, position)
-        position += 1
-    for path in new_paths:
-        mangadb.insert_page(chapter_id, position, path)
-        position += 1
+    for position, (kind, ref) in enumerate(final_entries):
+        if kind == "existing":
+            mangadb.set_page_position(ref, position)
+        else:
+            mangadb.insert_page(chapter_id, position, saved_paths_by_index[ref])
 
     return redirect(url_for("chapters_list", manga_id=manga_id))
 

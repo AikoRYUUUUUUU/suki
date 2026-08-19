@@ -31,8 +31,9 @@
       <p class="admin-error">{{ error }}</p>
     {% endif %}
 
-    <form class="admin-form" action="{{ url_for('update_chapter', manga_id=manga_id, chapter_id=chapter.id) }}" method="post" enctype="multipart/form-data">
+    <form id="edit-chapter-form" class="admin-form" action="{{ url_for('update_chapter', manga_id=manga_id, chapter_id=chapter.id) }}" method="post" enctype="multipart/form-data">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" id="order-input" name="order" value="">
 
       <label for="number">Número do capítulo</label>
       <input type="text" id="number" name="number" inputmode="decimal" value="{{ format_number(chapter.number) }}" required>
@@ -43,25 +44,15 @@
       <label for="release_date">Data de publicação</label>
       <input type="date" id="release_date" name="release_date" value="{{ chapter.release_date or '' }}" required>
 
-      <label>Páginas</label>
-      <p class="admin-hint">Marque "Remover" pra excluir uma página, ou mude o número de ordem pra reordenar.</p>
-      <div class="page-manager">
-        {% for p in pages %}
-          <div class="page-item">
-            <div class="thumb"><img src="{{ p.url }}" alt="Página {{ loop.index }}"></div>
-            <label for="pos_{{ p.id }}">Ordem</label>
-            <input type="number" id="pos_{{ p.id }}" name="pos_{{ p.id }}" value="{{ loop.index }}" min="1">
-            <div class="remove-row">
-              <input type="checkbox" id="remove_{{ p.id }}" name="remove_{{ p.id }}" value="1">
-              <label for="remove_{{ p.id }}" style="margin:0; text-transform:none; font-size:12.5px;">Remover</label>
-            </div>
-          </div>
-        {% endfor %}
+      <div class="page-manager-header">
+        <label style="margin:0;">Páginas</label>
+        <button type="button" id="add-pages-btn" class="btn btn-ghost">Adicionar páginas</button>
       </div>
-
-      <label for="new_pages">Adicionar mais páginas</label>
-      <input type="file" id="new_pages" name="new_pages" accept="image/png,image/jpeg,image/webp" multiple>
-      <p class="admin-hint">As novas páginas entram no final da lista (dá pra reordenar depois de salvar).</p>
+      <p class="admin-hint">Arraste pra reordenar. Clique no × pra remover uma página.</p>
+      <div id="page-manager" class="page-manager"></div>
+      <input type="file" id="new_pages_picker" accept="image/png,image/jpeg,image/webp" multiple style="display:none;">
+      <input type="file" id="new_pages_submit" name="new_pages" multiple style="display:none;">
+      <script type="application/json" id="initial-pages">{{ pages|tojson }}</script>
 
       <div class="admin-actions">
         <button type="submit" class="btn btn-primary">Salvar alterações</button>
@@ -71,5 +62,6 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/admin_chapter_editor.js') }}"></script>
 </body>
 </html>

@@ -448,6 +448,19 @@ def get_pages_by_ids(page_ids):
     return rows
 
 
+def count_pages_with_image_path(image_path):
+    """Quantas linhas de `pages` (em qualquer capítulo) apontam pra esse mesmo arquivo.
+    Usado antes de apagar um arquivo do disco - se mais de uma página usa o mesmo
+    caminho (pode acontecer com dados de seed/demo reaproveitando imagens), o arquivo
+    não pode ser apagado só porque uma delas foi removida."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT COUNT(*) AS n FROM pages WHERE image_path = ?", (image_path,)
+    ).fetchone()
+    conn.close()
+    return row["n"]
+
+
 def delete_pages_by_ids(page_ids):
     if not page_ids:
         return
