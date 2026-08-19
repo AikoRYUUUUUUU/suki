@@ -1,0 +1,60 @@
+{
+  "mangas": [
+    {
+      "id": "tinta-e-sombra",
+      "title": "Tinta e Sombra",
+      "titleOriginal": "試験漫画",
+      "author": "Estúdio Fictício",
+      "artist": "Estúdio Fictício",
+      "status": "Em andamento",
+      "year": 2024,
+      "genres": ["Ação", "Sobrenatural", "Drama"],
+      "rating": 4.6,
+      "cover": "assets/covers/tinta-e-sombra.svg",
+      "synopsis": "Este é um mangá FICTÍCIO usado apenas como dado de teste para demonstrar a estrutura do site (capa, catálogo, capítulo e modo de leitura). Substitua este registro pelos seus próprios títulos e imagens.",
+      "chapters": [
+        {
+          "id": "cap-1",
+          "number": 1,
+          "title": "O primeiro traço",
+          "releaseDate": "2024-01-05",
+          "pages": [
+            "assets/pages/ch1-p01.svg",
+            "assets/pages/ch1-p02.svg",
+            "assets/pages/ch1-p03.svg",
+            "assets/pages/ch1-p04.svg",
+            "assets/pages/ch1-p05.svg",
+            "assets/pages/ch1-p06.svg",
+            "assets/pages/ch1-p07.svg",
+            "assets/pages/ch1-p08.svg"
+          ]
+        },
+        {
+          "id": "cap-2",
+          "number": 2,
+          "title": "Sombra que responde",
+          "releaseDate": "2024-01-12",
+          "pages": [
+            "assets/pages/ch1-p01.svg",
+            "assets/pages/ch1-p02.svg",
+            "assets/pages/ch1-p03.svg",
+            "assets/pages/ch1-p04.svg"
+          ]
+        },
+        {
+          "id": "cap-3",
+          "number": 3,
+          "title": "O nome que ela não diz",
+          "releaseDate": "2024-01-19",
+          "pages": [
+            "assets/pages/ch1-p05.svg",
+            "assets/pages/ch1-p06.svg",
+            "assets/pages/ch1-p07.svg",
+            "assets/pages/ch1-p08.svg",
+            "assets/pages/ch1-p01.svg"
+          ]
+        }
+      ]
+    }
+  ]
+}

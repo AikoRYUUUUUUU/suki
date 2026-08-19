@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">Leitor — Sumi</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+</head>
+<body class="reader-body">
+
+<header class="reader-bar">
+  <div class="wrap">
+    <div class="reader-title">
+      <a href="index.html" style="margin-right:14px;">←</a>
+      <strong id="rt-manga">…</strong> · <span id="rt-chapter">…</span>
+    </div>
+    <div class="reader-controls">
+      <button class="icon-btn" id="prev-ch" title="Capítulo anterior">«</button>
+      <span class="page-counter" id="page-counter">–/–</span>
+      <button class="icon-btn" id="next-ch" title="Próximo capítulo">»</button>
+      <button class="icon-btn" id="mode-toggle" title="Alternar modo de leitura">⇅</button>
+    </div>
+  </div>
+</header>
+
+<main class="reader-stage" id="reader-stage">
+  <!-- páginas injetadas via JS -->
+</main>
+
+<!-- zonas de toque só usadas no modo paginado -->
+<div class="reader-tapzones" id="tapzones" style="display:none;">
+  <button id="zone-prev" aria-label="Página anterior"></button>
+  <button id="zone-next" aria-label="Próxima página"></button>
+</div>
+
+<script src="{{ url_for('static', filename='js/data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/reader.js') }}"></script>
+</body>
+</html>

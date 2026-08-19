@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Login — Painel Administrativo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+    <h1>Login administrativo</h1>
+    <form action="{{ url_for('login') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {% if error %}
+            <p style="color:#b00020;">{{ error }}</p>
+        {% endif %}
+
+        <label for="username">Usuário:</label>
+        <input type="text" id="username" name="username" required autofocus><br><br>
+
+        <label for="password">Senha:</label>
+        <input type="password" id="password" name="password" required><br><br>
+
+        <button type="submit">Entrar</button>
+    </form>
+</body>
+</html>

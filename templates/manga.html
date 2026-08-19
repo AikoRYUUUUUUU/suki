@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">Mangá — Sumi</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a href="index.html" class="brand"><span class="stamp">墨</span> Sumi</a>
+    <nav class="nav-links">
+      <a href="index.html">Biblioteca</a>
+      <a href="index.html#lancamentos">Lançamentos</a>
+      <a href="#">Gêneros</a>
+    </nav>
+  </div>
+</header>
+
+<section class="manga-hero">
+  <div class="wrap">
+    <div class="cover-frame">
+      <img id="cover-img" src="" alt="">
+    </div>
+    <div class="manga-info">
+      <p class="title-jp" id="title-jp"></p>
+      <h1 id="title-pt"></h1>
+      <div class="manga-meta-row" id="genres-row"></div>
+      <p class="manga-synopsis" id="synopsis"></p>
+
+      <div class="stat-row">
+        <div class="stat"><b id="stat-chapters">–</b><span>Capítulos</span></div>
+        <div class="stat"><b id="stat-rating">–</b><span>Avaliação</span></div>
+        <div class="stat"><b id="stat-year">–</b><span>Publicação</span></div>
+        <div class="stat"><b id="stat-status">–</b><span>Status</span></div>
+      </div>
+
+      <div class="hero-actions">
+        <a class="btn btn-primary" id="start-reading">Começar a ler</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="chapters">
+  <div class="wrap">
+    <p class="eyebrow">Sumário</p>
+    <h2 class="section-title">Capítulos</h2>
+    <div class="chapter-list" id="chapter-list"></div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="wrap">Sumi · projeto de exemplo · conteúdo fictício gerado para testes</div>
+</footer>
+
+<script src="{{ url_for('static', filename='js/data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/manga.js') }}"></script>
+</body>
+</html>

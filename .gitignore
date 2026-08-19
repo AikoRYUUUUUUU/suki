@@ -1,0 +1,12 @@
+.aider*
+
+# segredos e dados locais - nunca commitar
+.env
+*.db
+*.sqlite3
+
+# python
+__pycache__/
+*.pyc
+venv/
+.venv/

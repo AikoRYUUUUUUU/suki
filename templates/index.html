@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sumi — Biblioteca de Mangás</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="stamp">墨</span> Sumi</a>
+    <nav class="nav-links">
+      <a href="/">Biblioteca</a>
+      <a href="/#lancamentos">Lançamentos</a>
+      <a href="#">Gêneros</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <h1 class="hero-title">Leia mangás <span class="accent">sem ruído</span></h1>
+      <p class="hero-sub" id="hero-synopsis">Carregando…</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" id="hero-read-btn" href="#">Começar a ler</a>
+        <a class="btn btn-ghost" id="hero-cover-btn" href="#">Ver detalhes</a>
+      </div>
+    </div>
+    <div class="hero-cover">
+      <img id="hero-cover-img" src="" alt="">
+    </div>
+  </div>
+</section>
+
+<section class="shelf" id="lancamentos">
+  <div class="wrap">
+    <p class="eyebrow">Biblioteca</p>
+    <h2 class="section-title">Todos os títulos</h2>
+    <div class="grid-covers" id="grid-covers"></div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="wrap">Sumi · projeto de exemplo · conteúdo fictício gerado para testes</div>
+</footer>
+
+<script src="{{ url_for('static', filename='js/data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
