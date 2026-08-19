@@ -1,26 +1,37 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Login — Painel Administrativo</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login administrativo — Sumi</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 </head>
 <body>
-    <h1>Login administrativo</h1>
-    <form action="{{ url_for('login') }}" method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-        {% if error %}
-            <p style="color:#b00020;">{{ error }}</p>
-        {% endif %}
+<div class="login-shell">
+  <div class="brand"><span class="stamp">墨</span> Sumi</div>
 
-        <label for="username">Usuário:</label>
-        <input type="text" id="username" name="username" required autofocus><br><br>
+  <div class="admin-card">
+    {% if error %}
+      <p class="admin-error">{{ error }}</p>
+    {% endif %}
 
-        <label for="password">Senha:</label>
-        <input type="password" id="password" name="password" required><br><br>
+    <form class="admin-form" action="{{ url_for('login') }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-        <button type="submit">Entrar</button>
+      <label for="username">Usuário</label>
+      <input type="text" id="username" name="username" required autofocus>
+
+      <label for="password">Senha</label>
+      <input type="password" id="password" name="password" required>
+
+      <div class="admin-actions">
+        <button type="submit" class="btn btn-primary">Entrar</button>
+      </div>
     </form>
+  </div>
+</div>
+
 </body>
 </html>

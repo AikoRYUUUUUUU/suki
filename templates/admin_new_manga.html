@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adicionar mangá — Sumi</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="stamp">墨</span> Sumi</a>
+    <nav class="nav-links">
+      <a href="{{ url_for('admin') }}">← Painel</a>
+    </nav>
+  </div>
+</header>
+
+<div class="admin-shell">
+  <div class="admin-header">
+    <div>
+      <p class="eyebrow">Novo cadastro</p>
+      <h1>Adicionar mangá</h1>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    {% if error %}
+      <p class="admin-error">{{ error }}</p>
+    {% endif %}
+
+    <form class="admin-form" action="{{ url_for('create_manga') }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label for="title">Título</label>
+      <input type="text" id="title" name="title" required>
+
+      <label for="title_original">Título original</label>
+      <input type="text" id="title_original" name="title_original">
+
+      <label for="synopsis">Sinopse</label>
+      <textarea id="synopsis" name="synopsis" required></textarea>
+
+      <label for="status">Status</label>
+      <input type="text" id="status" name="status" placeholder="Em andamento, Completo..." required>
+
+      <label for="year">Ano</label>
+      <input type="text" id="year" name="year" inputmode="numeric">
+
+      <label for="rating">Avaliação (0 a 5)</label>
+      <input type="text" id="rating" name="rating" inputmode="decimal">
+
+      <label for="cover">URL da capa</label>
+      <input type="text" id="cover" name="cover" placeholder="assets/covers/....svg">
+
+      <label for="artist">Artista</label>
+      <input type="text" id="artist" name="artist">
+
+      <label for="tags">Tags</label>
+      <select id="tags" name="tag_ids" multiple>
+        {% for tag in tags %}
+          <option value="{{ tag['id'] }}">{{ tag['name'] }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="author">Autor</label>
+      <select id="author" name="author_id">
+        <option value="">—</option>
+        {% for author in authors %}
+          <option value="{{ author['id'] }}">{{ author['name'] }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="group">Grupo</label>
+      <select id="group" name="group_id">
+        <option value="">—</option>
+        {% for group in groups %}
+          <option value="{{ group['id'] }}">{{ group['name'] }}</option>
+        {% endfor %}
+      </select>
+
+      <div class="admin-actions">
+        <button type="submit" class="btn btn-primary">Adicionar mangá</button>
+        <a class="btn btn-ghost" href="{{ url_for('admin') }}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>

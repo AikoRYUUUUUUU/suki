@@ -62,6 +62,44 @@ def get_groups():
     return rows
 
 
+def get_dashboard_mangas():
+    conn = get_connection()
+    rows = [dict(r) for r in conn.execute("""
+        SELECT m.id, m.title, m.status, COUNT(c.id) AS chapter_count
+        FROM mangas m
+        LEFT JOIN chapters c ON c.manga_id = m.id
+        GROUP BY m.id
+        ORDER BY m.title
+    """)]
+    conn.close()
+    return rows
+
+
+def manga_exists(manga_id):
+    conn = get_connection()
+    row = conn.execute("SELECT 1 FROM mangas WHERE id = ?", (manga_id,)).fetchone()
+    conn.close()
+    return row is not None
+
+
+def get_manga_title(manga_id):
+    conn = get_connection()
+    row = conn.execute("SELECT title FROM mangas WHERE id = ?", (manga_id,)).fetchone()
+    conn.close()
+    return row["title"] if row else None
+
+
+def next_chapter_number(manga_id):
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT MAX(number) AS max_number FROM chapters WHERE manga_id = ?", (manga_id,)
+    ).fetchone()
+    conn.close()
+    if row["max_number"] is None:
+        return 1
+    return row["max_number"] + 1
+
+
 # ---------- leitura para a API pública (mesmo formato do antigo data/db.json) ----------
 
 def static_url(path):
@@ -205,5 +243,72 @@ def add_manga(title, synopsis, status, tag_ids, author_id, group_id,
 
         conn.commit()
         return manga_id
+    finally:
+        conn.close()
+
+
+def validate_chapter_fields(number, title):
+    """Validação pura, sem tocar disco/banco - roda antes de qualquer upload de arquivo."""
+    title = (title or "").strip()
+    if not title:
+        raise ValidationError("Título do capítulo é obrigatório.")
+
+    if number in (None, ""):
+        raise ValidationError("Número do capítulo é obrigatório.")
+    try:
+        number_val = float(number)
+    except (TypeError, ValueError):
+        raise ValidationError("Número do capítulo inválido.")
+    if number_val <= 0:
+        raise ValidationError("Número do capítulo deve ser positivo.")
+
+    return number_val, title
+
+
+def format_number(number_val):
+    if number_val == int(number_val):
+        return str(int(number_val))
+    return str(number_val)
+
+
+def _unique_chapter_slug(conn, manga_id, number_val):
+    base = f"{manga_id}-cap-{slugify(format_number(number_val))}"
+    slug = base
+    n = 2
+    while conn.execute("SELECT 1 FROM chapters WHERE id = ?", (slug,)).fetchone():
+        slug = f"{base}-{n}"
+        n += 1
+    return slug
+
+
+def build_chapter_id(manga_id, number_val):
+    conn = get_connection()
+    try:
+        return _unique_chapter_slug(conn, manga_id, number_val)
+    finally:
+        conn.close()
+
+
+def add_chapter(manga_id, chapter_id, number_val, title, release_date, page_paths):
+    if not page_paths:
+        raise ValidationError("Selecione ao menos uma imagem de página.")
+
+    conn = get_connection()
+    try:
+        if not conn.execute("SELECT 1 FROM mangas WHERE id = ?", (manga_id,)).fetchone():
+            raise ValidationError("Mangá inválido.")
+
+        conn.execute("""
+            INSERT INTO chapters (id, manga_id, number, title, release_date)
+            VALUES (?, ?, ?, ?, ?)
+        """, (chapter_id, manga_id, number_val, title, release_date or None))
+
+        for position, path in enumerate(page_paths):
+            conn.execute("""
+                INSERT INTO pages (chapter_id, position, image_path)
+                VALUES (?, ?, ?)
+            """, (chapter_id, position, path))
+
+        conn.commit()
     finally:
         conn.close()

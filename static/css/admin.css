@@ -1,57 +1,152 @@
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f9;
-    margin: 0;
-    padding: 0;
+/* Estilos do admin - reaproveita os tokens/variáveis definidos em site.css
+   (site.css deve ser importado antes deste arquivo nos templates). */
+
+.admin-shell {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 28px 80px;
 }
 
-h1 {
-    color: #333;
-    text-align: center;
-    padding: 20px 0;
+.admin-shell.wide { max-width: 900px; }
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 36px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-form {
-    width: 50%;
-    margin: 0 auto;
-    background-color: #fff;
-    padding: 20px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+.admin-header h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  margin: 0;
 }
 
-label {
-    display: block;
-    margin-bottom: 5px;
-    color: #666;
+.admin-header .eyebrow { margin-bottom: 6px; }
+
+.admin-card {
+  background: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin-bottom: 20px;
 }
 
-input[type="text"], textarea {
-    width: 100%;
-    padding: 8px;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    margin-bottom: 20px;
+form.admin-form label {
+  display: block;
+  font-size: 12px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--gray);
+  margin: 18px 0 6px;
+}
+form.admin-form label:first-of-type { margin-top: 0; }
+
+.admin-form input[type="text"],
+.admin-form input[type="number"],
+.admin-form input[type="password"],
+.admin-form input[type="date"],
+.admin-form textarea,
+.admin-form select {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.admin-form textarea { min-height: 110px; resize: vertical; }
+.admin-form select[multiple] { min-height: 120px; }
+.admin-form input:focus,
+.admin-form textarea:focus,
+.admin-form select:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
 }
 
-select {
-    width: 100%;
-    padding: 8px;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    margin-bottom: 20px;
+.admin-form input[type="file"] {
+  width: 100%;
+  padding: 14px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  color: var(--paper-dim);
+  background: var(--ink);
 }
 
-button {
-    background-color: #28a745;
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+.admin-hint {
+  font-size: 12.5px;
+  color: var(--gray);
+  margin-top: 6px;
 }
 
-button:hover {
-    background-color: #218838;
+.admin-error {
+  background: var(--vermillion-soft);
+  border: 1px solid var(--vermillion);
+  color: var(--paper);
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.admin-actions {
+  margin-top: 26px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.manga-list { border-top: 1px solid var(--line); }
+.manga-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 4px;
+  border-bottom: 1px solid var(--line);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.manga-list-row .info h3 {
+  margin: 0 0 4px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 15px;
+}
+.manga-list-row .info .meta { font-size: 12.5px; color: var(--gray); }
+.manga-list-row .actions { display: flex; gap: 10px; flex-shrink: 0; }
+
+.empty-state {
+  color: var(--gray);
+  padding: 32px 4px;
+  text-align: center;
+}
+
+.login-shell {
+  max-width: 380px;
+  margin: 90px auto;
+  padding: 0 28px;
+}
+.login-shell .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 28px;
+  justify-content: center;
+}
+.login-shell .brand .stamp {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--vermillion);
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  color: var(--paper);
 }

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adicionar capítulo — Sumi</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="stamp">墨</span> Sumi</a>
+    <nav class="nav-links">
+      <a href="{{ url_for('admin') }}">← Painel</a>
+    </nav>
+  </div>
+</header>
+
+<div class="admin-shell">
+  <div class="admin-header">
+    <div>
+      <p class="eyebrow">{{ manga_title }}</p>
+      <h1>Adicionar capítulo</h1>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    {% if error %}
+      <p class="admin-error">{{ error }}</p>
+    {% endif %}
+
+    <form class="admin-form" action="{{ url_for('create_chapter', manga_id=manga_id) }}" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label for="number">Número do capítulo</label>
+      <input type="text" id="number" name="number" inputmode="decimal" value="{{ next_number }}" required>
+
+      <label for="title">Título do capítulo</label>
+      <input type="text" id="title" name="title" required>
+
+      <label for="release_date">Data de lançamento</label>
+      <input type="date" id="release_date" name="release_date">
+
+      <label for="pages">Páginas (imagens)</label>
+      <input type="file" id="pages" name="pages" accept="image/png,image/jpeg,image/webp" multiple required>
+      <p class="admin-hint">PNG, JPG ou WEBP. Selecione todas as páginas do capítulo de uma vez, na ordem de leitura.</p>
+
+      <div class="admin-actions">
+        <button type="submit" class="btn btn-primary">Adicionar capítulo</button>
+        <a class="btn btn-ghost" href="{{ url_for('admin') }}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>

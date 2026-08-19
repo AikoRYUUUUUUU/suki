@@ -1,73 +1,58 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Painel Administrativo — Sumi</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel administrativo — Sumi</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 </head>
 <body>
-    <h1>Adicionar Mangá</h1>
 
-    <form action="{{ url_for('logout') }}" method="post" style="width:50%;margin:0 auto 10px;text-align:right;">
+<header class="topbar">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="stamp">墨</span> Sumi</a>
+    <nav class="nav-links">
+      <a href="/">Ver site</a>
+    </nav>
+  </div>
+</header>
+
+<div class="admin-shell wide">
+  <div class="admin-header">
+    <div>
+      <p class="eyebrow">Painel administrativo</p>
+      <h1>Mangás</h1>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <a class="btn btn-primary" href="{{ url_for('new_manga_form') }}">Adicionar mangá</a>
+      <form action="{{ url_for('logout') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit">Sair</button>
-    </form>
+        <button type="submit" class="btn btn-ghost">Sair</button>
+      </form>
+    </div>
+  </div>
 
-    <form action="{{ url_for('add_manga') }}" method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="admin-card" style="padding:0 28px;">
+    {% if mangas %}
+      <div class="manga-list">
+        {% for m in mangas %}
+          <div class="manga-list-row">
+            <div class="info">
+              <h3>{{ m.title }}</h3>
+              <p class="meta">{{ m.status }} · {{ m.chapter_count }} capítulo{{ 's' if m.chapter_count != 1 else '' }}</p>
+            </div>
+            <div class="actions">
+              <a class="btn btn-ghost" href="{{ url_for('new_chapter_form', manga_id=m.id) }}">Adicionar capítulo</a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty-state">Nenhum mangá cadastrado ainda. Comece adicionando um.</p>
+    {% endif %}
+  </div>
+</div>
 
-        {% if error %}
-            <p style="color:#b00020;">{{ error }}</p>
-        {% endif %}
-
-        <label for="title">Título:</label>
-        <input type="text" id="title" name="title" required><br><br>
-
-        <label for="title_original">Título original:</label>
-        <input type="text" id="title_original" name="title_original"><br><br>
-
-        <label for="synopsis">Sinopse:</label>
-        <textarea id="synopsis" name="synopsis" required></textarea><br><br>
-
-        <label for="status">Status:</label>
-        <input type="text" id="status" name="status" placeholder="Em andamento, Completo..." required><br><br>
-
-        <label for="year">Ano:</label>
-        <input type="text" id="year" name="year" inputmode="numeric"><br><br>
-
-        <label for="rating">Avaliação (0 a 5):</label>
-        <input type="text" id="rating" name="rating" inputmode="decimal"><br><br>
-
-        <label for="cover">URL da capa:</label>
-        <input type="text" id="cover" name="cover" placeholder="assets/covers/....svg"><br><br>
-
-        <label for="artist">Artista:</label>
-        <input type="text" id="artist" name="artist"><br><br>
-
-        <label for="tags">Tags:</label>
-        <select id="tags" name="tag_ids" multiple>
-            {% for tag in tags %}
-                <option value="{{ tag['id'] }}">{{ tag['name'] }}</option>
-            {% endfor %}
-        </select><br><br>
-
-        <label for="author">Autor:</label>
-        <select id="author" name="author_id">
-            <option value="">—</option>
-            {% for author in authors %}
-                <option value="{{ author['id'] }}">{{ author['name'] }}</option>
-            {% endfor %}
-        </select><br><br>
-
-        <label for="group">Grupo:</label>
-        <select id="group" name="group_id">
-            <option value="">—</option>
-            {% for group in groups %}
-                <option value="{{ group['id'] }}">{{ group['name'] }}</option>
-            {% endfor %}
-        </select><br><br>
-
-        <button type="submit">Adicionar Mangá</button>
-    </form>
 </body>
 </html>
