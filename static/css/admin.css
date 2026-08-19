@@ -111,13 +111,16 @@ form.admin-form label:first-of-type { margin-top: 0; }
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--line);
-  aspect-ratio: 3/4.3;
   background: var(--ink);
 }
-.confirm-cover img { width: 100%; height: 100%; object-fit: cover; }
+.confirm-cover img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
 .confirm-cover-empty {
   width: 100%;
-  height: 100%;
+  aspect-ratio: 3/4.3;
   display: grid;
   place-items: center;
   color: var(--gray);
