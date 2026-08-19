@@ -10,8 +10,12 @@ async function renderHome() {
   document.getElementById("hero-cover-btn").href = `manga.html?id=${featured.id}`;
 
   const firstChapter = [...featured.chapters].sort((a, b) => a.number - b.number)[0];
-  document.getElementById("hero-read-btn").href =
-    `reader.html?id=${featured.id}&ch=${firstChapter.id}`;
+  const heroReadBtn = document.getElementById("hero-read-btn");
+  if (firstChapter) {
+    heroReadBtn.href = `reader.html?id=${featured.id}&ch=${firstChapter.id}`;
+  } else {
+    heroReadBtn.style.display = "none";
+  }
 
   // grid de capas
   const grid = document.getElementById("grid-covers");
