@@ -356,6 +356,45 @@ def update_cover(manga_id):
     return redirect(url_for("admin"))
 
 
+def delete_page_files_if_unshared(pages):
+    """Apaga do disco cada página cujo image_path não é usado por nenhuma outra página
+    fora deste mesmo lote (protege dados de demonstração, que reaproveitam os mesmos
+    arquivos entre capítulos). Exclui o próprio lote da contagem, senão apagar várias
+    páginas que compartilham arquivo de uma vez (ex.: excluir o mangá inteiro) faria
+    nenhuma delas ser apagada."""
+    batch_ids = [p["id"] for p in pages]
+    for p in pages:
+        if mangadb.count_pages_with_image_path(p["image_path"], exclude_ids=batch_ids) == 0:
+            full_path = os.path.join(app.root_path, "static", *p["image_path"].split("/"))
+            if os.path.exists(full_path):
+                os.remove(full_path)
+
+
+@app.route("/admin/mangas/<manga_id>/delete", methods=["POST"])
+@login_required
+def delete_manga_route(manga_id):
+    if mangadb.get_manga_title(manga_id) is None:
+        abort(404)
+
+    pages = mangadb.get_manga_pages_with_paths(manga_id)
+    cover = mangadb.get_manga_cover(manga_id)
+
+    delete_page_files_if_unshared(pages)
+    if cover:
+        cover_full_path = os.path.join(app.root_path, "static", *cover.split("/"))
+        if os.path.exists(cover_full_path):
+            os.remove(cover_full_path)
+
+    mangadb.delete_manga(manga_id)
+
+    shutil.rmtree(
+        os.path.join(app.root_path, "static", "assets", "pages", manga_id),
+        ignore_errors=True,
+    )
+
+    return redirect(url_for("admin"))
+
+
 @app.route("/admin/mangas/<manga_id>/chapters/new", methods=["GET"])
 @login_required
 def new_chapter_form(manga_id):
@@ -554,13 +593,7 @@ def update_chapter(manga_id, chapter_id):
 
     mangadb.update_chapter_metadata(chapter_id, number_val, title, release_date)
 
-    for old in removed_pages:
-        # só apaga o arquivo do disco se nenhuma outra página (nesse ou noutro
-        # capítulo) ainda aponta pro mesmo caminho - evita apagar imagem em uso
-        if mangadb.count_pages_with_image_path(old["image_path"]) <= 1:
-            full_path = os.path.join(app.root_path, "static", *old["image_path"].split("/"))
-            if os.path.exists(full_path):
-                os.remove(full_path)
+    delete_page_files_if_unshared(removed_pages)
     mangadb.delete_pages_by_ids(removed_ids)
 
     for position, (kind, ref) in enumerate(final_entries):
@@ -568,6 +601,24 @@ def update_chapter(manga_id, chapter_id):
             mangadb.set_page_position(ref, position)
         else:
             mangadb.insert_page(chapter_id, position, saved_paths_by_index[ref])
+
+    return redirect(url_for("chapters_list", manga_id=manga_id))
+
+
+@app.route("/admin/mangas/<manga_id>/chapters/<chapter_id>/delete", methods=["POST"])
+@login_required
+def delete_chapter_route(manga_id, chapter_id):
+    chapter = mangadb.get_chapter_edit_data(manga_id, chapter_id)
+    if chapter is None:
+        abort(404)
+
+    delete_page_files_if_unshared(chapter["pages"])
+    mangadb.delete_chapter(chapter_id)
+
+    shutil.rmtree(
+        os.path.join(app.root_path, "static", "assets", "pages", manga_id, chapter_id),
+        ignore_errors=True,
+    )
 
     return redirect(url_for("chapters_list", manga_id=manga_id))
 

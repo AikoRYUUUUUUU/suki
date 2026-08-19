@@ -231,6 +231,44 @@ form.admin-form label:first-of-type { margin-top: 0; }
   text-align: center;
 }
 
+.btn-danger {
+  background: transparent;
+  border-color: var(--vermillion);
+  color: var(--vermillion);
+}
+.btn-danger:hover { background: var(--vermillion-soft); }
+
+.btn-danger-solid {
+  background: var(--vermillion);
+  border-color: var(--vermillion);
+  color: var(--paper);
+}
+.btn-danger-solid:hover { background: #a03d24; }
+
+dialog.confirm-dialog {
+  background: var(--ink-soft);
+  color: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 26px;
+  max-width: 380px;
+  width: 90%;
+  font-family: var(--font-body);
+}
+dialog.confirm-dialog::backdrop {
+  background: rgba(12, 11, 16, .72);
+}
+.confirm-dialog-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  margin: 0 0 8px;
+}
+.confirm-dialog-detail {
+  color: var(--paper-dim);
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+
 .login-shell {
   max-width: 380px;
   margin: 90px auto;

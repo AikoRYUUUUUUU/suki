@@ -313,6 +313,33 @@ def update_manga_cover(manga_id, cover_path):
     conn.close()
 
 
+def get_manga_pages_with_paths(manga_id):
+    """Todas as páginas (de todos os capítulos) desse mangá - usado pra saber o que
+    limpar do disco antes de apagar o mangá (o cascade do SQLite só cuida do banco)."""
+    conn = get_connection()
+    rows = [dict(r) for r in conn.execute("""
+        SELECT p.id, p.image_path FROM pages p
+        JOIN chapters c ON c.id = p.chapter_id
+        WHERE c.manga_id = ?
+    """, (manga_id,))]
+    conn.close()
+    return rows
+
+
+def delete_manga(manga_id):
+    conn = get_connection()
+    conn.execute("DELETE FROM mangas WHERE id = ?", (manga_id,))
+    conn.commit()
+    conn.close()
+
+
+def delete_chapter(chapter_id):
+    conn = get_connection()
+    conn.execute("DELETE FROM chapters WHERE id = ?", (chapter_id,))
+    conn.commit()
+    conn.close()
+
+
 def validate_chapter_fields(number, title, release_date, manga_id, exclude_chapter_id=None):
     """Validação pura, sem tocar disco - roda antes de qualquer upload de arquivo.
     `exclude_chapter_id` é usado na edição, pra não comparar o capítulo com ele mesmo
@@ -448,15 +475,26 @@ def get_pages_by_ids(page_ids):
     return rows
 
 
-def count_pages_with_image_path(image_path):
-    """Quantas linhas de `pages` (em qualquer capítulo) apontam pra esse mesmo arquivo.
-    Usado antes de apagar um arquivo do disco - se mais de uma página usa o mesmo
-    caminho (pode acontecer com dados de seed/demo reaproveitando imagens), o arquivo
-    não pode ser apagado só porque uma delas foi removida."""
+def count_pages_with_image_path(image_path, exclude_ids=()):
+    """Quantas linhas de `pages` apontam pra esse mesmo arquivo, ignorando as linhas em
+    `exclude_ids`. Usado antes de apagar um arquivo do disco - se alguma outra página
+    (fora do lote que está sendo apagado agora) ainda usa o mesmo caminho (pode
+    acontecer com dados de seed/demo reaproveitando imagens), o arquivo não pode ser
+    apagado. `exclude_ids` deve ser o conjunto de páginas do próprio lote sendo
+    excluído - sem isso, apagar várias páginas que compartilham arquivo de uma vez
+    (ex.: excluir o mangá inteiro) faria cada uma "ver" a outra como ainda em uso e
+    nenhuma seria apagada, deixando lixo órfão no disco."""
     conn = get_connection()
-    row = conn.execute(
-        "SELECT COUNT(*) AS n FROM pages WHERE image_path = ?", (image_path,)
-    ).fetchone()
+    if exclude_ids:
+        placeholders = ",".join("?" for _ in exclude_ids)
+        row = conn.execute(
+            f"SELECT COUNT(*) AS n FROM pages WHERE image_path = ? AND id NOT IN ({placeholders})",
+            [image_path, *exclude_ids],
+        ).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT COUNT(*) AS n FROM pages WHERE image_path = ?", (image_path,)
+        ).fetchone()
     conn.close()
     return row["n"]
 

@@ -38,6 +38,13 @@
             </div>
             <div class="actions">
               <a class="btn btn-ghost" href="{{ url_for('edit_chapter_form', manga_id=manga_id, chapter_id=c.id) }}">Editar</a>
+              <button type="button" class="btn btn-danger js-delete-trigger"
+                      data-target-form="delete-chapter-{{ c.id }}"
+                      data-name="Cap. {{ format_number(c.number) }} — {{ c.title }}"
+                      data-detail="e {{ c.page_count }} página{{ 's' if c.page_count != 1 else '' }}">Excluir</button>
+              <form id="delete-chapter-{{ c.id }}" action="{{ url_for('delete_chapter_route', manga_id=manga_id, chapter_id=c.id) }}" method="post" style="display:none;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              </form>
             </div>
           </div>
         {% endfor %}
@@ -48,5 +55,16 @@
   </div>
 </div>
 
+<dialog id="confirm-delete-dialog" class="confirm-dialog">
+  <p class="confirm-dialog-title">Excluir "<span id="confirm-delete-name"></span>"?</p>
+  <p class="confirm-dialog-detail" id="confirm-delete-detail"></p>
+  <p class="admin-hint">Essa ação não pode ser desfeita.</p>
+  <div class="admin-actions">
+    <button type="button" id="confirm-delete-btn" class="btn btn-danger-solid">Excluir</button>
+    <button type="button" id="confirm-delete-cancel" class="btn btn-ghost">Cancelar</button>
+  </div>
+</dialog>
+
+<script src="{{ url_for('static', filename='js/admin_confirm_delete.js') }}"></script>
 </body>
 </html>
