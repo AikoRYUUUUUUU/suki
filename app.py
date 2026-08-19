@@ -1,9 +1,13 @@
 import glob
+import hashlib
+import hmac
 import os
 import secrets
 import shutil
+import subprocess
 import time
 from functools import wraps
+from pathlib import Path
 
 from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
 from flask_wtf.csrf import CSRFProtect
@@ -23,6 +27,8 @@ app.config["MAX_CONTENT_LENGTH"] = 60 * 1024 * 1024  # 60MB por request (upload 
 
 ADMIN_USERNAME = os.environ["ADMIN_USERNAME"]
 ADMIN_PASSWORD_HASH = os.environ["ADMIN_PASSWORD_HASH"]
+GITHUB_WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET")
+WSGI_FILE_PATH = os.environ.get("WSGI_FILE_PATH")
 
 csrf = CSRFProtect(app)
 limiter = Limiter(get_remote_address, app=app, default_limits=[])
@@ -145,6 +151,47 @@ def reader_page():
 @app.route("/api/mangas")
 def api_mangas():
     return jsonify({"mangas": mangadb.get_all_mangas_full()})
+
+
+# ---------- auto-deploy (webhook do GitHub) ----------
+
+def verify_github_signature(payload_body, signature_header):
+    if not GITHUB_WEBHOOK_SECRET or not signature_header:
+        return False
+    expected = "sha256=" + hmac.new(
+        GITHUB_WEBHOOK_SECRET.encode(), payload_body, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature_header)
+
+
+@app.route("/deploy", methods=["POST"])
+@csrf.exempt
+@limiter.limit("10 per minute")
+def deploy():
+    signature = request.headers.get("X-Hub-Signature-256", "")
+    if not verify_github_signature(request.get_data(), signature):
+        abort(403)
+
+    payload = request.get_json(silent=True) or {}
+    if payload.get("ref") not in (None, "refs/heads/master"):
+        return "ignored", 200
+
+    try:
+        result = subprocess.run(
+            ["git", "pull"], cwd=app.root_path,
+            capture_output=True, text=True, timeout=60, check=False,
+        )
+        print(f"[deploy] git pull rc={result.returncode} out={result.stdout!r} err={result.stderr!r}")
+
+        if WSGI_FILE_PATH:
+            Path(WSGI_FILE_PATH).touch()
+        else:
+            print("[deploy] WSGI_FILE_PATH não configurado - reload não disparado automaticamente")
+    except Exception as e:
+        print(f"[deploy] falhou: {e}")
+        return "error", 500
+
+    return "ok", 200
 
 
 # ---------- autenticação do admin ----------
