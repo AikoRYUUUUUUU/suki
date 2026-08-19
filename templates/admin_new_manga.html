@@ -31,7 +31,7 @@
       <p class="admin-error">{{ error }}</p>
     {% endif %}
 
-    <form class="admin-form" action="{{ url_for('create_manga') }}" method="post">
+    <form class="admin-form" action="{{ url_for('preview_manga') }}" method="post" enctype="multipart/form-data">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <label for="title">Título</label>
@@ -52,8 +52,9 @@
       <label for="rating">Avaliação (0 a 5)</label>
       <input type="text" id="rating" name="rating" inputmode="decimal">
 
-      <label for="cover">URL da capa</label>
-      <input type="text" id="cover" name="cover" placeholder="assets/covers/....svg">
+      <label for="cover">Capa</label>
+      <input type="file" id="cover" name="cover" accept="image/png,image/jpeg,image/webp">
+      <p class="admin-hint">Opcional agora - dá pra adicionar ou trocar depois pelo painel.</p>
 
       <label for="artist">Artista</label>
       <input type="text" id="artist" name="artist">
@@ -82,7 +83,7 @@
       </select>
 
       <div class="admin-actions">
-        <button type="submit" class="btn btn-primary">Adicionar mangá</button>
+        <button type="submit" class="btn btn-primary">Revisar e continuar</button>
         <a class="btn btn-ghost" href="{{ url_for('admin') }}">Cancelar</a>
       </div>
     </form>

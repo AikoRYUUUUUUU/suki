@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confirmar mangá — Sumi</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="stamp">墨</span> Sumi</a>
+    <nav class="nav-links">
+      <a href="{{ url_for('admin') }}">← Painel</a>
+    </nav>
+  </div>
+</header>
+
+<div class="admin-shell">
+  <div class="admin-header">
+    <div>
+      <p class="eyebrow">Revisar antes de salvar</p>
+      <h1>Confirmar mangá</h1>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    <div class="confirm-preview">
+      <div class="confirm-cover">
+        {% if cover_preview_url %}
+          <img src="{{ cover_preview_url }}" alt="Capa de {{ fields.title }}">
+        {% else %}
+          <div class="confirm-cover-empty">Sem capa</div>
+        {% endif %}
+      </div>
+
+      <dl class="confirm-fields">
+        <dt>Título</dt><dd>{{ fields.title }}</dd>
+        {% if title_original %}<dt>Título original</dt><dd>{{ title_original }}</dd>{% endif %}
+        <dt>Sinopse</dt><dd>{{ fields.synopsis }}</dd>
+        <dt>Status</dt><dd>{{ fields.status }}</dd>
+        {% if fields.year %}<dt>Ano</dt><dd>{{ fields.year }}</dd>{% endif %}
+        {% if fields.rating is not none %}<dt>Avaliação</dt><dd>{{ fields.rating }}</dd>{% endif %}
+        {% if artist %}<dt>Artista</dt><dd>{{ artist }}</dd>{% endif %}
+        {% if author_name %}<dt>Autor</dt><dd>{{ author_name }}</dd>{% endif %}
+        {% if group_name %}<dt>Grupo</dt><dd>{{ group_name }}</dd>{% endif %}
+        {% if tag_names %}<dt>Tags</dt><dd>{{ tag_names|join(', ') }}</dd>{% endif %}
+      </dl>
+    </div>
+
+    <form class="admin-form" action="{{ url_for('create_manga') }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="title" value="{{ fields.title }}">
+      <input type="hidden" name="title_original" value="{{ title_original }}">
+      <input type="hidden" name="synopsis" value="{{ fields.synopsis }}">
+      <input type="hidden" name="status" value="{{ fields.status }}">
+      <input type="hidden" name="year" value="{{ fields.year if fields.year is not none else '' }}">
+      <input type="hidden" name="rating" value="{{ fields.rating if fields.rating is not none else '' }}">
+      <input type="hidden" name="artist" value="{{ artist }}">
+      <input type="hidden" name="author_id" value="{{ fields.author_id if fields.author_id is not none else '' }}">
+      <input type="hidden" name="group_id" value="{{ fields.group_id if fields.group_id is not none else '' }}">
+      {% for tid in fields.tag_ids %}
+        <input type="hidden" name="tag_ids" value="{{ tid }}">
+      {% endfor %}
+      <input type="hidden" name="cover_token" value="{{ cover_token }}">
+
+      <div class="admin-actions">
+        <button type="submit" class="btn btn-primary">Confirmar e salvar</button>
+        <a class="btn btn-ghost" href="{{ url_for('new_manga_form') }}">Voltar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>

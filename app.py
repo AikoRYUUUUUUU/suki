@@ -1,5 +1,8 @@
+import glob
 import os
+import secrets
 import shutil
+import time
 from functools import wraps
 
 from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
@@ -41,6 +44,75 @@ def sniff_image_extension(file_storage):
     if head[0:4] == b"RIFF" and head[8:12] == b"WEBP":
         return "webp"
     return None
+
+
+def covers_dir():
+    return os.path.join(app.root_path, "static", "assets", "covers")
+
+
+def pending_covers_dir():
+    return os.path.join(covers_dir(), "_pending")
+
+
+def cleanup_pending_covers(max_age_seconds=86400):
+    """Remove capas temporárias abandonadas (form de preview nunca confirmado)."""
+    folder = pending_covers_dir()
+    if not os.path.isdir(folder):
+        return
+    cutoff = time.time() - max_age_seconds
+    for f in glob.glob(os.path.join(folder, "*")):
+        try:
+            if os.path.getmtime(f) < cutoff:
+                os.remove(f)
+        except OSError:
+            pass
+
+
+def save_pending_cover(cover_file, ext):
+    """Salva a capa enviada no preview num arquivo temporário com token aleatório,
+    devolve o token. Descarta qualquer capa pendente anterior desta mesma sessão."""
+    folder = pending_covers_dir()
+    os.makedirs(folder, exist_ok=True)
+
+    old_token = session.get("pending_cover_token")
+    if old_token:
+        for f in glob.glob(os.path.join(folder, old_token + ".*")):
+            os.remove(f)
+
+    token = secrets.token_hex(16)
+    cover_file.save(os.path.join(folder, f"{token}.{ext}"))
+    session["pending_cover_token"] = token
+    return token
+
+
+def promote_pending_cover(token, manga_id):
+    """Move a capa temporária (identificada só pelo token, nunca por nome de arquivo do
+    cliente) pra seu lugar definitivo assets/covers/<manga_id>.<ext>, substituindo
+    qualquer capa anterior desse mangá (mesmo se a extensão mudou)."""
+    matches = glob.glob(os.path.join(pending_covers_dir(), token + ".*"))
+    if not matches:
+        return None
+    src = matches[0]
+    ext = src.rsplit(".", 1)[-1]
+
+    folder = covers_dir()
+    os.makedirs(folder, exist_ok=True)
+    for old in glob.glob(os.path.join(folder, manga_id + ".*")):
+        os.remove(old)
+
+    dest = os.path.join(folder, f"{manga_id}.{ext}")
+    shutil.move(src, dest)
+    return f"assets/covers/{manga_id}.{ext}"
+
+
+def save_manga_cover(manga_id, cover_file, ext):
+    """Salva/substitui a capa definitiva de um mangá já existente (tela de editar capa)."""
+    folder = covers_dir()
+    os.makedirs(folder, exist_ok=True)
+    for old in glob.glob(os.path.join(folder, manga_id + ".*")):
+        os.remove(old)
+    cover_file.save(os.path.join(folder, f"{manga_id}.{ext}"))
+    return f"assets/covers/{manga_id}.{ext}"
 
 
 def login_required(view):
@@ -119,11 +191,67 @@ def new_manga_form():
     )
 
 
+def render_new_manga_error(message):
+    return render_template(
+        "admin_new_manga.html",
+        tags=mangadb.get_tags(), authors=mangadb.get_authors(), groups=mangadb.get_groups(),
+        error=message,
+    ), 400
+
+
+@app.route("/admin/mangas/preview", methods=["POST"])
+@login_required
+def preview_manga():
+    cleanup_pending_covers()
+
+    try:
+        fields = mangadb.validate_manga_fields(
+            title=request.form.get("title"),
+            synopsis=request.form.get("synopsis"),
+            status=request.form.get("status"),
+            tag_ids=request.form.getlist("tag_ids"),
+            author_id=request.form.get("author_id"),
+            group_id=request.form.get("group_id"),
+            year=request.form.get("year"),
+            rating=request.form.get("rating"),
+        )
+    except mangadb.ValidationError as e:
+        return render_new_manga_error(str(e))
+
+    cover_token = ""
+    cover_preview_url = None
+    cover_file = request.files.get("cover")
+    if cover_file and cover_file.filename:
+        ext = sniff_image_extension(cover_file)
+        if ext is None:
+            return render_new_manga_error("A imagem da capa não é válida (png, jpg, webp).")
+        cover_token = save_pending_cover(cover_file, ext)
+        cover_preview_url = f"/static/assets/covers/_pending/{cover_token}.{ext}"
+
+    tags_by_id = {t["id"]: t["name"] for t in mangadb.get_tags()}
+    tag_names = [tags_by_id[t] for t in fields["tag_ids"] if t in tags_by_id]
+    author_name = next(
+        (a["name"] for a in mangadb.get_authors() if a["id"] == fields["author_id"]), None
+    )
+    group_name = next(
+        (g["name"] for g in mangadb.get_groups() if g["id"] == fields["group_id"]), None
+    )
+
+    return render_template(
+        "admin_confirm_manga.html",
+        fields=fields,
+        title_original=(request.form.get("title_original") or "").strip(),
+        artist=(request.form.get("artist") or "").strip(),
+        tag_names=tag_names, author_name=author_name, group_name=group_name,
+        cover_preview_url=cover_preview_url, cover_token=cover_token,
+    )
+
+
 @app.route("/admin/mangas", methods=["POST"])
 @login_required
 def create_manga():
     try:
-        mangadb.add_manga(
+        manga_id = mangadb.add_manga(
             title=request.form.get("title"),
             synopsis=request.form.get("synopsis"),
             status=request.form.get("status"),
@@ -134,14 +262,59 @@ def create_manga():
             artist=request.form.get("artist"),
             year=request.form.get("year"),
             rating=request.form.get("rating"),
-            cover=request.form.get("cover"),
         )
     except mangadb.ValidationError as e:
+        return render_new_manga_error(str(e))
+
+    cover_token = request.form.get("cover_token")
+    if cover_token:
+        cover_path = promote_pending_cover(cover_token, manga_id)
+        if cover_path:
+            mangadb.update_manga_cover(manga_id, cover_path)
+        session.pop("pending_cover_token", None)
+
+    return redirect(url_for("admin"))
+
+
+@app.route("/admin/mangas/<manga_id>/cover", methods=["GET"])
+@login_required
+def edit_cover_form(manga_id):
+    title = mangadb.get_manga_title(manga_id)
+    if title is None:
+        abort(404)
+    return render_template(
+        "admin_edit_cover.html",
+        manga_id=manga_id, manga_title=title,
+        current_cover=mangadb.static_url(mangadb.get_manga_cover(manga_id)),
+        error=None,
+    )
+
+
+@app.route("/admin/mangas/<manga_id>/cover", methods=["POST"])
+@login_required
+def update_cover(manga_id):
+    title = mangadb.get_manga_title(manga_id)
+    if title is None:
+        abort(404)
+
+    def render_error(message):
         return render_template(
-            "admin_new_manga.html",
-            tags=mangadb.get_tags(), authors=mangadb.get_authors(), groups=mangadb.get_groups(),
-            error=str(e),
+            "admin_edit_cover.html",
+            manga_id=manga_id, manga_title=title,
+            current_cover=mangadb.static_url(mangadb.get_manga_cover(manga_id)),
+            error=message,
         ), 400
+
+    cover_file = request.files.get("cover")
+    if not cover_file or not cover_file.filename:
+        return render_error("Selecione uma imagem.")
+
+    ext = sniff_image_extension(cover_file)
+    if ext is None:
+        return render_error("Arquivo não é uma imagem válida (png, jpg, webp).")
+
+    cover_path = save_manga_cover(manga_id, cover_file, ext)
+    mangadb.update_manga_cover(manga_id, cover_path)
     return redirect(url_for("admin"))
 
 

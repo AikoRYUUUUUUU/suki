@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alterar capa — Sumi</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a href="/" class="brand"><span class="stamp">墨</span> Sumi</a>
+    <nav class="nav-links">
+      <a href="{{ url_for('admin') }}">← Painel</a>
+    </nav>
+  </div>
+</header>
+
+<div class="admin-shell">
+  <div class="admin-header">
+    <div>
+      <p class="eyebrow">{{ manga_title }}</p>
+      <h1>Alterar capa</h1>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    {% if error %}
+      <p class="admin-error">{{ error }}</p>
+    {% endif %}
+
+    <div class="confirm-cover" style="margin-bottom:22px;">
+      {% if current_cover %}
+        <img src="{{ current_cover }}" alt="Capa atual de {{ manga_title }}">
+      {% else %}
+        <div class="confirm-cover-empty">Sem capa</div>
+      {% endif %}
+    </div>
+
+    <form class="admin-form" action="{{ url_for('update_cover', manga_id=manga_id) }}" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label for="cover">Nova capa</label>
+      <input type="file" id="cover" name="cover" accept="image/png,image/jpeg,image/webp" required>
+
+      <div class="admin-actions">
+        <button type="submit" class="btn btn-primary">Salvar capa</button>
+        <a class="btn btn-ghost" href="{{ url_for('admin') }}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>

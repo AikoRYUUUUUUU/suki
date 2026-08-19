@@ -173,8 +173,9 @@ class ValidationError(Exception):
     pass
 
 
-def add_manga(title, synopsis, status, tag_ids, author_id, group_id,
-              title_original=None, artist=None, year=None, rating=None, cover=None):
+def validate_manga_fields(title, synopsis, status, tag_ids, author_id, group_id, year=None, rating=None):
+    """Validação pura (só leituras de existência) - reaproveitada por add_manga e pela
+    rota de preview em app.py, pra não duplicar regra entre as duas."""
     title = (title or "").strip()
     synopsis = (synopsis or "").strip()
     status = (status or "").strip()
@@ -225,17 +226,33 @@ def add_manga(title, synopsis, status, tag_ids, author_id, group_id,
             if not conn.execute("SELECT 1 FROM tags WHERE id = ?", (tid_val,)).fetchone():
                 raise ValidationError("Tag inválida.")
             clean_tag_ids.append(tid_val)
+    finally:
+        conn.close()
 
-        manga_id = unique_slug(conn, slugify(title))
+    return {
+        "title": title, "synopsis": synopsis, "status": status,
+        "year": year_val, "rating": rating_val,
+        "author_id": author_id_val, "group_id": group_id_val,
+        "tag_ids": clean_tag_ids,
+    }
+
+
+def add_manga(title, synopsis, status, tag_ids, author_id, group_id,
+              title_original=None, artist=None, year=None, rating=None, cover=None):
+    f = validate_manga_fields(title, synopsis, status, tag_ids, author_id, group_id, year, rating)
+
+    conn = get_connection()
+    try:
+        manga_id = unique_slug(conn, slugify(f["title"]))
 
         conn.execute("""
             INSERT INTO mangas (id, title, title_original, author_id, artist, group_id,
                                  status, year, rating, cover, synopsis)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (manga_id, title, title_original, author_id_val, artist, group_id_val,
-              status, year_val, rating_val, cover, synopsis))
+        """, (manga_id, f["title"], title_original, f["author_id"], artist, f["group_id"],
+              f["status"], f["year"], f["rating"], cover, f["synopsis"]))
 
-        for tid_val in clean_tag_ids:
+        for tid_val in f["tag_ids"]:
             conn.execute(
                 "INSERT INTO manga_tags (manga_id, tag_id) VALUES (?, ?)",
                 (manga_id, tid_val),
@@ -245,6 +262,20 @@ def add_manga(title, synopsis, status, tag_ids, author_id, group_id,
         return manga_id
     finally:
         conn.close()
+
+
+def get_manga_cover(manga_id):
+    conn = get_connection()
+    row = conn.execute("SELECT cover FROM mangas WHERE id = ?", (manga_id,)).fetchone()
+    conn.close()
+    return row["cover"] if row else None
+
+
+def update_manga_cover(manga_id, cover_path):
+    conn = get_connection()
+    conn.execute("UPDATE mangas SET cover = ? WHERE id = ?", (cover_path, manga_id))
+    conn.commit()
+    conn.close()
 
 
 def validate_chapter_fields(number, title):
