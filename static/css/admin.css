@@ -321,10 +321,4 @@ dialog.confirm-dialog::backdrop {
 .login-shell .brand .stamp {
   width: 26px;
   height: 26px;
-  border-radius: 50%;
-  background: var(--vermillion);
-  display: grid;
-  place-items: center;
-  font-size: 13px;
-  color: var(--paper);
 }

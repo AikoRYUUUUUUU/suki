@@ -1,4 +1,4 @@
--- Schema do banco de dados do Sumi. Versionado no git; o arquivo .db real
+-- Schema do banco de dados do Suki. Versionado no git; o arquivo .db real
 -- (com os dados) nunca é commitado — veja .gitignore.
 
 CREATE TABLE IF NOT EXISTS tags (

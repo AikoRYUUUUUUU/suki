@@ -8,7 +8,7 @@ async function renderMangaPage() {
     return;
   }
 
-  document.getElementById("page-title").textContent = `${manga.title} — Sumi`;
+  document.getElementById("page-title").textContent = `${manga.title} — Suki`;
   document.getElementById("cover-img").src = manga.cover;
   document.getElementById("cover-img").alt = `Capa de ${manga.title}`;
   document.getElementById("title-jp").textContent = manga.titleOriginal;

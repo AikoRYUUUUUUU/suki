@@ -22,7 +22,7 @@ async function initReader() {
   state.pages = chapter.pages;
   state.current = 0;
 
-  document.getElementById("page-title").textContent = `${manga.title} — Cap. ${chapter.number} — Sumi`;
+  document.getElementById("page-title").textContent = `${manga.title} — Cap. ${chapter.number} — Suki`;
   document.getElementById("rt-manga").textContent = manga.title;
   document.getElementById("rt-chapter").textContent = `Cap. ${chapter.number} — ${chapter.title}`;
 
