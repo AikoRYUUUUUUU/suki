@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capítulos em massa — {{ manga_title }} — Suki</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='assets/logo.svg') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a href="/" class="brand"><img class="stamp" src="{{ url_for('static', filename='assets/logo.svg') }}" alt=""><img class="wordmark" src="{{ url_for('static', filename='assets/wordmark.svg') }}" alt="Suki"></a>
+    <nav class="nav-links">
+      <a href="{{ url_for('chapters_list', manga_id=manga_id) }}">← Capítulos</a>
+    </nav>
+  </div>
+</header>
+
+<div class="admin-shell">
+  <div class="admin-header">
+    <div>
+      <p class="eyebrow">{{ manga_title }}</p>
+      <h1>Capítulos em massa</h1>
+    </div>
+  </div>
+
+  <div class="admin-card" id="bulk-form-card" data-manga-id="{{ manga_id }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label for="release_date">Data de publicação (aplicada a todos)</label>
+    <input type="date" id="release_date" value="{{ today }}">
+
+    <label for="zips">Arquivos .zip (um por capítulo)</label>
+    <input type="file" id="zips" accept=".zip" multiple>
+    <p class="admin-hint">
+      Cada .zip vira um capítulo. O número do capítulo é lido do nome do arquivo
+      (ex.: "Capítulo 05.zip", "Cap 5.zip", "05.zip") — renomeie o arquivo se
+      não tiver um número claro. As páginas dentro do .zip são ordenadas pelo
+      nome (numérico), então nomeie as imagens tipo 001.jpg, 002.jpg…
+    </p>
+
+    <div class="admin-actions">
+      <button type="button" id="bulk-submit" class="btn btn-primary">Enviar capítulos</button>
+      <a class="btn btn-ghost" href="{{ url_for('chapters_list', manga_id=manga_id) }}">Cancelar</a>
+    </div>
+
+    <div id="bulk-log" class="admin-log"></div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/admin_uploads.js') }}"></script>
+<script src="{{ url_for('static', filename='js/zip_reader.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin_bulk_chapters.js') }}"></script>
+</body>
+</html>

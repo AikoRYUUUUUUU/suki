@@ -6,7 +6,7 @@
 
   function logLine(text, ok) {
     const p = document.createElement("p");
-    p.className = "migration-log-line" + (ok === false ? " migration-log-error" : "");
+    p.className = "admin-log-line" + (ok === false ? " admin-log-error" : "");
     p.textContent = text;
     log.appendChild(p);
     log.scrollTop = log.scrollHeight;

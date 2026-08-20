@@ -726,6 +726,55 @@ def create_chapter(manga_id):
     return redirect(url_for("admin"))
 
 
+@app.route("/admin/mangas/<manga_id>/chapters/bulk", methods=["GET"])
+@login_required
+def bulk_chapters_form(manga_id):
+    title = mangadb.get_manga_title(manga_id)
+    if title is None:
+        abort(404)
+    return render_template(
+        "admin_bulk_chapters.html",
+        manga_id=manga_id, manga_title=title, today=date.today().isoformat(),
+    )
+
+
+@app.route("/admin/mangas/<manga_id>/chapters/bulk-create", methods=["POST"])
+@login_required
+def bulk_create_chapter(manga_id):
+    """Cria um único capítulo a partir de páginas já enviadas pro R2 - a mesma
+    validação de sempre (mangadb.validate_chapter_fields), só que respondendo
+    em JSON em vez de redirecionar, pra ser chamada repetidamente pelo JS do
+    upload em massa (uma vez por .zip) sem navegar a página a cada capítulo."""
+    if not mangadb.manga_exists(manga_id):
+        abort(404)
+
+    data = request.get_json(silent=True) or {}
+
+    try:
+        number_val, title, release_date = mangadb.validate_chapter_fields(
+            data.get("number"), data.get("title"), data.get("release_date"), manga_id,
+        )
+    except mangadb.ValidationError as e:
+        return jsonify({"error": str(e)}), 400
+
+    pages_raw = data.get("pages")
+    try:
+        pages = _parse_page_urls(json.dumps(pages_raw) if pages_raw is not None else None)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    chapter_id = mangadb.build_chapter_id(manga_id, number_val)
+    try:
+        mangadb.add_chapter(
+            manga_id=manga_id, chapter_id=chapter_id, number_val=number_val, title=title,
+            release_date=release_date, pages=pages,
+        )
+    except mangadb.ValidationError as e:
+        return jsonify({"error": str(e)}), 400
+
+    return jsonify({"ok": True, "chapter_id": chapter_id})
+
+
 @app.route("/admin/mangas/<manga_id>/chapters", methods=["GET"])
 @login_required
 def chapters_list(manga_id):
