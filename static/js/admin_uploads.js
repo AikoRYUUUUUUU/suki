@@ -34,10 +34,7 @@
     setTimeout(() => toast.remove(), 8000);
   }
 
-  async function sniffAndPresign(file, kind, mangaId) {
-    const headBuf = await file.slice(0, 16).arrayBuffer();
-    const head = Array.from(new Uint8Array(headBuf));
-
+  async function requestPresign(head, kind, mangaId) {
     const presignRes = await fetch("/admin/uploads/presign", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
@@ -47,18 +44,30 @@
       const body = await presignRes.json().catch(() => ({}));
       throw new Error(body.error || "Falha ao preparar o envio da imagem.");
     }
-    const { upload_url, public_url, content_type } = await presignRes.json();
+    return presignRes.json();
+  }
 
-    const putRes = await fetch(upload_url, {
-      method: "PUT",
-      headers: { "Content-Type": content_type },
-      body: file,
-    });
-    if (!putRes.ok) {
-      throw new Error("Falha ao enviar o arquivo pro armazenamento.");
+  async function sniffAndPresign(file, kind, mangaId) {
+    const headBuf = await file.slice(0, 16).arrayBuffer();
+    const head = Array.from(new Uint8Array(headBuf));
+
+    // a URL pré-assinada expira em poucos minutos - numa conexão lenta o PUT pode
+    // não terminar a tempo, então numa falha pedimos uma URL nova e tentamos de novo
+    // antes de desistir, em vez de derrubar o upload inteiro por causa disso.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const { upload_url, public_url, content_type } = await requestPresign(head, kind, mangaId);
+      const putRes = await fetch(upload_url, {
+        method: "PUT",
+        headers: { "Content-Type": content_type },
+        body: file,
+      });
+      if (putRes.ok) {
+        return { url: public_url, size: file.size };
+      }
+      if (attempt === 2) {
+        throw new Error("Falha ao enviar o arquivo pro armazenamento (tentei 2 vezes).");
+      }
     }
-
-    return { url: public_url, size: file.size };
   }
 
   async function presignDeleteUrls(urls) {
