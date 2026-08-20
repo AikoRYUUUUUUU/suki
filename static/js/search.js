@@ -55,7 +55,7 @@ async function renderSearchPage() {
   searchInput.addEventListener("input", applyFilters);
   searchStatus.addEventListener("change", applyFilters);
   tagFilter.addEventListener("change", applyFilters);
-  if (selectedTags().length) tagFilter.open = true;
+  if (selectedTags().length || location.hash === "#tag-filter") tagFilter.open = true;
   applyFilters();
 }
 
