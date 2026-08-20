@@ -723,6 +723,7 @@ body.reader-body {
   background: var(--ink-soft);
 }
 .reader-stage.paginated img { margin-bottom: 0; }
+.reader-stage.webtoon img { margin-bottom: 0; border-radius: 0; display: block; }
 
 .reader-tapzones {
   position: fixed;
