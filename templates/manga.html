@@ -11,11 +11,11 @@
 
 <header class="topbar">
   <div class="wrap">
-    <a href="index.html" class="brand"><img class="stamp" src="{{ url_for('static', filename='assets/logo.svg') }}" alt=""><img class="wordmark" src="{{ url_for('static', filename='assets/wordmark.svg') }}" alt="Suki"></a>
+    <a href="{{ url_for('index') }}" class="brand"><img class="stamp" src="{{ url_for('static', filename='assets/logo.svg') }}" alt=""><img class="wordmark" src="{{ url_for('static', filename='assets/wordmark.svg') }}" alt="Suki"></a>
     <nav class="nav-links" id="nav-links">
-      <a href="busca.html">Biblioteca</a>
-      <a href="index.html#lancamentos">Lançamentos</a>
-      <a href="busca.html#tag-filter">Gêneros</a>
+      <a href="{{ url_for('search_page') }}">Biblioteca</a>
+      <a href="{{ url_for('index') }}#lancamentos">Lançamentos</a>
+      <a href="{{ url_for('search_page') }}#tag-filter">Gêneros</a>
     </nav>
     <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="nav-links">
       <span></span><span></span><span></span>
