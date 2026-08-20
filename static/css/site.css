@@ -273,6 +273,40 @@ img { max-width: 100%; display: block; }
 .btn-ghost:hover { border-color: var(--gray); }
 .hero-actions { display: flex; gap: 14px; }
 
+.rate-widget {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.rate-widget-label {
+  font-size: 12px;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.rate-stars { display: flex; gap: 2px; }
+.rate-star {
+  background: transparent;
+  border: none;
+  color: var(--line);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px;
+  transition: color .12s ease;
+}
+.rate-star:hover { color: var(--gold); }
+.rate-star.filled { color: var(--gold); }
+.rate-star:disabled { cursor: default; }
+.rate-star:disabled:hover { color: var(--line); }
+.rate-star:disabled.filled:hover { color: var(--gold); }
+.rate-widget-msg {
+  font-size: 12.5px;
+  color: var(--paper-dim);
+}
+
 /* ---------- grade de capas ---------- */
 .shelf {
   padding: 64px 0;
@@ -545,6 +579,13 @@ footer.site-footer {
   font-size: 12.5px;
   color: var(--gray);
 }
+
+.comments {
+  padding: 0 0 80px;
+  border-top: 1px solid var(--line);
+}
+.comments .wrap { padding-top: 44px; }
+#comments-mount { margin-top: 20px; }
 
 /* ---------- READER (reader.html) ---------- */
 body.reader-body {

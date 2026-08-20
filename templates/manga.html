@@ -41,6 +41,18 @@
       <div class="hero-actions">
         <a class="btn btn-primary" id="start-reading">Começar a ler</a>
       </div>
+
+      <div class="rate-widget" id="rate-widget">
+        <span class="rate-widget-label">Avalie este mangá</span>
+        <div class="rate-stars" id="rate-stars">
+          <button type="button" class="rate-star" data-value="1" aria-label="1 estrela">★</button>
+          <button type="button" class="rate-star" data-value="2" aria-label="2 estrelas">★</button>
+          <button type="button" class="rate-star" data-value="3" aria-label="3 estrelas">★</button>
+          <button type="button" class="rate-star" data-value="4" aria-label="4 estrelas">★</button>
+          <button type="button" class="rate-star" data-value="5" aria-label="5 estrelas">★</button>
+        </div>
+        <span class="rate-widget-msg" id="rate-widget-msg"></span>
+      </div>
     </div>
   </div>
 </section>
@@ -52,6 +64,16 @@
     <div class="chapter-list" id="chapter-list"></div>
   </div>
 </section>
+
+{% if cusdis_app_id %}
+<section class="comments">
+  <div class="wrap">
+    <p class="eyebrow">Comunidade</p>
+    <h2 class="section-title">Comentários</h2>
+    <div id="comments-mount" data-cusdis-app-id="{{ cusdis_app_id }}"></div>
+  </div>
+</section>
+{% endif %}
 
 <footer class="site-footer">
   <div class="wrap">Suki · projeto de exemplo · conteúdo fictício gerado para testes</div>

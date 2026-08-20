@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS mangas (
     year INTEGER,
     rating REAL,
     cover TEXT,
-    synopsis TEXT NOT NULL
+    synopsis TEXT NOT NULL,
+    rating_sum REAL NOT NULL DEFAULT 0,
+    rating_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS manga_tags (
@@ -50,6 +52,15 @@ CREATE TABLE IF NOT EXISTS pages (
     position INTEGER NOT NULL,
     image_path TEXT NOT NULL,
     size_bytes INTEGER
+);
+
+-- Um voto por (mangá, impressão digital do leitor) - a chave primária composta
+-- é o que impede voto duplicado, sem precisar de conta de usuário.
+CREATE TABLE IF NOT EXISTS votes (
+    manga_id TEXT NOT NULL REFERENCES mangas(id) ON DELETE CASCADE,
+    voter_hash TEXT NOT NULL,
+    value INTEGER NOT NULL,
+    PRIMARY KEY (manga_id, voter_hash)
 );
 
 CREATE INDEX IF NOT EXISTS idx_chapters_manga ON chapters(manga_id);

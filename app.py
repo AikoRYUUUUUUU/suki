@@ -4,6 +4,7 @@ import json
 import os
 import secrets
 import shutil
+import sqlite3
 import subprocess
 from datetime import date
 from functools import wraps
@@ -30,6 +31,7 @@ ADMIN_USERNAME = os.environ["ADMIN_USERNAME"]
 ADMIN_PASSWORD_HASH = os.environ["ADMIN_PASSWORD_HASH"]
 GITHUB_WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET")
 WSGI_FILE_PATH = os.environ.get("WSGI_FILE_PATH")
+CUSDIS_APP_ID = os.environ.get("CUSDIS_APP_ID")
 
 csrf = CSRFProtect(app)
 limiter = Limiter(get_remote_address, app=app, default_limits=[])
@@ -41,6 +43,24 @@ with app.app_context():
 
 def is_r2_url(path):
     return bool(path) and path.startswith(("http://", "https://"))
+
+
+def get_client_ip():
+    """PythonAnywhere fica atrás do proxy deles, então `request.remote_addr` sozinho
+    daria o IP do proxy pra todo mundo (colidindo os votos de leitores diferentes).
+    X-Forwarded-For, quando presente, tem o IP real do visitante primeiro na lista."""
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.remote_addr or ""
+
+
+def voter_hash():
+    """Impressão digital do leitor pra travar voto duplicado - hash do IP com o
+    SECRET_KEY como tempero, então não dá pra reverter pro IP original a partir
+    do que fica gravado em `votes`."""
+    raw = get_client_ip() + app.config["SECRET_KEY"]
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def login_required(view):
@@ -75,7 +95,7 @@ def search_page():
 
 @app.route("/manga.html")
 def manga_page():
-    return render_template("manga.html")
+    return render_template("manga.html", cusdis_app_id=CUSDIS_APP_ID)
 
 
 @app.route("/reader.html")
@@ -86,6 +106,26 @@ def reader_page():
 @app.route("/api/mangas")
 def api_mangas():
     return jsonify({"mangas": mangadb.get_all_mangas_full()})
+
+
+@app.route("/api/mangas/<manga_id>/rate", methods=["POST"])
+@csrf.exempt
+@limiter.limit("20 per minute")
+def rate_manga(manga_id):
+    if not mangadb.manga_exists(manga_id):
+        abort(404)
+
+    data = request.get_json(silent=True) or {}
+    value = data.get("value")
+    if not isinstance(value, int) or value < 1 or value > 5:
+        abort(400)
+
+    try:
+        rating, rating_count = mangadb.add_vote(manga_id, voter_hash(), value)
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "already_voted"}), 409
+
+    return jsonify({"rating": rating, "ratingCount": rating_count})
 
 
 # ---------- auto-deploy (webhook do GitHub) ----------

@@ -39,6 +39,7 @@ def init_db():
     conn = get_connection()
     conn.executescript(schema)
     _migrate_pages_size_bytes(conn)
+    _migrate_mangas_rating_votes(conn)
     conn.commit()
     conn.close()
 
@@ -51,6 +52,16 @@ def _migrate_pages_size_bytes(conn):
     columns = [row["name"] for row in conn.execute("PRAGMA table_info(pages)")]
     if "size_bytes" not in columns:
         conn.execute("ALTER TABLE pages ADD COLUMN size_bytes INTEGER")
+
+
+def _migrate_mangas_rating_votes(conn):
+    """Mesmo princípio: adiciona rating_sum/rating_count numa tabela `mangas` já
+    existente (banco de produção criado antes do sistema de votos)."""
+    columns = [row["name"] for row in conn.execute("PRAGMA table_info(mangas)")]
+    if "rating_sum" not in columns:
+        conn.execute("ALTER TABLE mangas ADD COLUMN rating_sum REAL NOT NULL DEFAULT 0")
+    if "rating_count" not in columns:
+        conn.execute("ALTER TABLE mangas ADD COLUMN rating_count INTEGER NOT NULL DEFAULT 0")
 
 
 def slugify(text):
@@ -178,6 +189,14 @@ def static_url(path):
     return f"/static/{path}"
 
 
+def effective_rating(row):
+    """Média dos votos dos leitores se já existir algum; senão cai pra nota fixa
+    digitada pelo admin no cadastro (serve de valor inicial pra mangás sem voto ainda)."""
+    if row["rating_count"]:
+        return round(row["rating_sum"] / row["rating_count"], 2)
+    return row["rating"]
+
+
 def get_all_mangas_full():
     conn = get_connection()
     mangas = conn.execute("""
@@ -223,7 +242,8 @@ def get_all_mangas_full():
             "status": m["status"],
             "year": m["year"],
             "genres": genres,
-            "rating": m["rating"],
+            "rating": effective_rating(m),
+            "ratingCount": m["rating_count"],
             "cover": static_url(m["cover"]),
             "synopsis": m["synopsis"],
             "chapters": chapters,
@@ -661,3 +681,32 @@ def update_page_image(page_id, image_path, size_bytes):
     )
     conn.commit()
     conn.close()
+
+
+# ---------- avaliação dos leitores ----------
+
+def add_vote(manga_id, voter_hash, value):
+    """Registra o voto e atualiza a média numa única transação. A chave primária
+    composta (manga_id, voter_hash) de `votes` é quem impede voto duplicado -
+    o INSERT levanta sqlite3.IntegrityError se essa pessoa já votou nesse mangá
+    (deixa o chamador decidir como responder, não trata aqui)."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            "INSERT INTO votes (manga_id, voter_hash, value) VALUES (?, ?, ?)",
+            (manga_id, voter_hash, value),
+        )
+        conn.execute(
+            "UPDATE mangas SET rating_sum = rating_sum + ?, rating_count = rating_count + 1 WHERE id = ?",
+            (value, manga_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT rating, rating_sum, rating_count FROM mangas WHERE id = ?", (manga_id,)
+    ).fetchone()
+    conn.close()
+    return effective_rating(row), row["rating_count"]
