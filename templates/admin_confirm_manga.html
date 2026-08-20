@@ -30,8 +30,8 @@
   <div class="admin-card">
     <div class="confirm-preview">
       <div class="confirm-cover">
-        {% if cover_preview_url %}
-          <img src="{{ cover_preview_url }}" alt="Capa de {{ fields.title }}">
+        {% if cover_url %}
+          <img src="{{ cover_url }}" alt="Capa de {{ fields.title }}">
         {% else %}
           <div class="confirm-cover-empty">Sem capa</div>
         {% endif %}
@@ -63,7 +63,7 @@
       <input type="hidden" name="author" value="{{ fields.author }}">
       <input type="hidden" name="group_id" value="{{ fields.group_id if fields.group_id is not none else '' }}">
       <input type="hidden" name="tags" value="{{ fields.tag_names|join(', ') }}">
-      <input type="hidden" name="cover_token" value="{{ cover_token }}">
+      <input type="hidden" name="cover_url" value="{{ cover_url }}">
 
       <div class="admin-actions">
         <button type="submit" class="btn btn-primary">Confirmar e salvar</button>

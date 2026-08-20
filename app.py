@@ -1,11 +1,10 @@
-import glob
 import hashlib
 import hmac
+import json
 import os
 import secrets
 import shutil
 import subprocess
-import time
 from datetime import date
 from functools import wraps
 from pathlib import Path
@@ -17,6 +16,7 @@ from flask_limiter.util import get_remote_address
 from werkzeug.security import check_password_hash
 
 import mangadb
+import r2
 
 app = Flask(__name__)
 
@@ -24,7 +24,7 @@ app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_DEBUG") != "1"
-app.config["MAX_CONTENT_LENGTH"] = 60 * 1024 * 1024  # 60MB por request (upload de páginas)
+app.config["MAX_CONTENT_LENGTH"] = 1 * 1024 * 1024  # imagens não passam mais pelo Flask (vão direto pro R2)
 
 ADMIN_USERNAME = os.environ["ADMIN_USERNAME"]
 ADMIN_PASSWORD_HASH = os.environ["ADMIN_PASSWORD_HASH"]
@@ -39,88 +39,8 @@ with app.app_context():
     mangadb.init_db()
 
 
-def sniff_image_extension(file_storage):
-    """Identifica o tipo real da imagem pelos bytes (assinatura mágica), nunca pelo
-    nome do arquivo ou pelo Content-Type declarado pelo cliente - ambos são
-    informados pelo navegador/cliente e podem ser falsificados trivialmente."""
-    head = file_storage.stream.read(16)
-    file_storage.stream.seek(0)
-    if head.startswith(b"\x89PNG\r\n\x1a\n"):
-        return "png"
-    if head.startswith(b"\xff\xd8\xff"):
-        return "jpg"
-    if head[0:4] == b"RIFF" and head[8:12] == b"WEBP":
-        return "webp"
-    return None
-
-
-def covers_dir():
-    return os.path.join(app.root_path, "static", "assets", "covers")
-
-
-def pending_covers_dir():
-    return os.path.join(covers_dir(), "_pending")
-
-
-def cleanup_pending_covers(max_age_seconds=86400):
-    """Remove capas temporárias abandonadas (form de preview nunca confirmado)."""
-    folder = pending_covers_dir()
-    if not os.path.isdir(folder):
-        return
-    cutoff = time.time() - max_age_seconds
-    for f in glob.glob(os.path.join(folder, "*")):
-        try:
-            if os.path.getmtime(f) < cutoff:
-                os.remove(f)
-        except OSError:
-            pass
-
-
-def save_pending_cover(cover_file, ext):
-    """Salva a capa enviada no preview num arquivo temporário com token aleatório,
-    devolve o token. Descarta qualquer capa pendente anterior desta mesma sessão."""
-    folder = pending_covers_dir()
-    os.makedirs(folder, exist_ok=True)
-
-    old_token = session.get("pending_cover_token")
-    if old_token:
-        for f in glob.glob(os.path.join(folder, old_token + ".*")):
-            os.remove(f)
-
-    token = secrets.token_hex(16)
-    cover_file.save(os.path.join(folder, f"{token}.{ext}"))
-    session["pending_cover_token"] = token
-    return token
-
-
-def promote_pending_cover(token, manga_id):
-    """Move a capa temporária (identificada só pelo token, nunca por nome de arquivo do
-    cliente) pra seu lugar definitivo assets/covers/<manga_id>.<ext>, substituindo
-    qualquer capa anterior desse mangá (mesmo se a extensão mudou)."""
-    matches = glob.glob(os.path.join(pending_covers_dir(), token + ".*"))
-    if not matches:
-        return None
-    src = matches[0]
-    ext = src.rsplit(".", 1)[-1]
-
-    folder = covers_dir()
-    os.makedirs(folder, exist_ok=True)
-    for old in glob.glob(os.path.join(folder, manga_id + ".*")):
-        os.remove(old)
-
-    dest = os.path.join(folder, f"{manga_id}.{ext}")
-    shutil.move(src, dest)
-    return f"assets/covers/{manga_id}.{ext}"
-
-
-def save_manga_cover(manga_id, cover_file, ext):
-    """Salva/substitui a capa definitiva de um mangá já existente (tela de editar capa)."""
-    folder = covers_dir()
-    os.makedirs(folder, exist_ok=True)
-    for old in glob.glob(os.path.join(folder, manga_id + ".*")):
-        os.remove(old)
-    cover_file.save(os.path.join(folder, f"{manga_id}.{ext}"))
-    return f"assets/covers/{manga_id}.{ext}"
+def is_r2_url(path):
+    return bool(path) and path.startswith(("http://", "https://"))
 
 
 def login_required(view):
@@ -247,6 +167,118 @@ def admin():
     )
 
 
+@app.route("/admin/uploads/presign", methods=["POST"])
+@login_required
+def presign_upload():
+    """Confere os bytes reais enviados (magic bytes, não nome/Content-Type do
+    cliente) e devolve uma URL PUT pré-assinada pro R2 - o navegador do admin
+    envia o arquivo direto pro bucket, sem passar pelo Flask/PythonAnywhere."""
+    data = request.get_json(silent=True) or {}
+    kind = data.get("kind")
+    if kind not in ("cover", "page"):
+        abort(400)
+
+    manga_id = data.get("manga_id")
+    if kind == "page":
+        if not manga_id or not mangadb.manga_exists(manga_id):
+            abort(400)
+
+    head = data.get("head")
+    if not isinstance(head, list) or not head:
+        abort(400)
+    try:
+        head_bytes = bytes(head)
+    except (TypeError, ValueError):
+        abort(400)
+
+    ext = r2.sniff_bytes(head_bytes)
+    if ext is None:
+        return jsonify({"error": "Arquivo não é uma imagem válida (png, jpg, webp)."}), 400
+
+    if kind == "cover":
+        key = f"covers/{secrets.token_hex(16)}.{ext}"
+    else:
+        key = f"pages/{manga_id}/{secrets.token_hex(8)}.{ext}"
+
+    try:
+        upload_url = r2.presign_put(key)
+    except r2.R2NotConfigured as e:
+        return jsonify({"error": str(e)}), 503
+
+    return jsonify({
+        "upload_url": upload_url,
+        "public_url": r2.public_url(key),
+        "content_type": r2.CONTENT_TYPES[ext],
+        "key": key,
+    })
+
+
+@app.route("/admin/r2/presign-delete", methods=["POST"])
+@login_required
+def presign_delete():
+    """Devolve URLs DELETE pré-assinadas pras URLs informadas que forem
+    hospedadas no nosso bucket R2 (ignora caminhos locais legados)."""
+    data = request.get_json(silent=True) or {}
+    urls = data.get("urls")
+    if not isinstance(urls, list):
+        abort(400)
+
+    result = {}
+    for url in urls:
+        key = r2.key_from_public_url(url)
+        if key is None:
+            continue
+        try:
+            result[url] = r2.presign_delete(key)
+        except r2.R2NotConfigured:
+            continue
+    return jsonify({"urls": result})
+
+
+def _manga_r2_urls(manga_id):
+    urls = []
+    cover = mangadb.get_manga_cover(manga_id)
+    if is_r2_url(cover):
+        urls.append(cover)
+    for p in mangadb.get_manga_pages_with_paths(manga_id):
+        if is_r2_url(p["image_path"]):
+            urls.append(p["image_path"])
+    return urls
+
+
+@app.route("/admin/mangas/<manga_id>/r2-delete-urls", methods=["POST"])
+@login_required
+def manga_r2_delete_urls(manga_id):
+    if not mangadb.manga_exists(manga_id):
+        abort(404)
+    result = {}
+    for url in _manga_r2_urls(manga_id):
+        key = r2.key_from_public_url(url)
+        try:
+            result[url] = r2.presign_delete(key)
+        except r2.R2NotConfigured:
+            continue
+    return jsonify({"urls": result})
+
+
+@app.route("/admin/mangas/<manga_id>/chapters/<chapter_id>/r2-delete-urls", methods=["POST"])
+@login_required
+def chapter_r2_delete_urls(manga_id, chapter_id):
+    chapter = mangadb.get_chapter_edit_data(manga_id, chapter_id)
+    if chapter is None:
+        abort(404)
+    result = {}
+    for p in chapter["pages"]:
+        if not is_r2_url(p["image_path"]):
+            continue
+        key = r2.key_from_public_url(p["image_path"])
+        try:
+            result[p["image_path"]] = r2.presign_delete(key)
+        except r2.R2NotConfigured:
+            continue
+    return jsonify({"urls": result})
+
+
 @app.route("/admin/mangas/<manga_id>/status", methods=["POST"])
 @login_required
 def update_status(manga_id):
@@ -280,8 +312,6 @@ def render_new_manga_error(message):
 @app.route("/admin/mangas/preview", methods=["POST"])
 @login_required
 def preview_manga():
-    cleanup_pending_covers()
-
     try:
         fields = mangadb.validate_manga_fields(
             title=request.form.get("title"),
@@ -296,15 +326,7 @@ def preview_manga():
     except mangadb.ValidationError as e:
         return render_new_manga_error(str(e))
 
-    cover_token = ""
-    cover_preview_url = None
-    cover_file = request.files.get("cover")
-    if cover_file and cover_file.filename:
-        ext = sniff_image_extension(cover_file)
-        if ext is None:
-            return render_new_manga_error("A imagem da capa não é válida (png, jpg, webp).")
-        cover_token = save_pending_cover(cover_file, ext)
-        cover_preview_url = f"/static/assets/covers/_pending/{cover_token}.{ext}"
+    cover_url = (request.form.get("cover_url") or "").strip()
 
     group_name = next(
         (g["name"] for g in mangadb.get_groups() if g["id"] == fields["group_id"]), None
@@ -316,13 +338,14 @@ def preview_manga():
         title_original=(request.form.get("title_original") or "").strip(),
         artist=(request.form.get("artist") or "").strip(),
         tag_names=fields["tag_names"], author_name=fields["author"] or None, group_name=group_name,
-        cover_preview_url=cover_preview_url, cover_token=cover_token,
+        cover_url=cover_url,
     )
 
 
 @app.route("/admin/mangas", methods=["POST"])
 @login_required
 def create_manga():
+    cover_url = (request.form.get("cover_url") or "").strip()
     try:
         manga_id = mangadb.add_manga(
             title=request.form.get("title"),
@@ -335,16 +358,10 @@ def create_manga():
             artist=request.form.get("artist"),
             year=request.form.get("year"),
             rating=request.form.get("rating"),
+            cover=cover_url or None,
         )
     except mangadb.ValidationError as e:
         return render_new_manga_error(str(e))
-
-    cover_token = request.form.get("cover_token")
-    if cover_token:
-        cover_path = promote_pending_cover(cover_token, manga_id)
-        if cover_path:
-            mangadb.update_manga_cover(manga_id, cover_path)
-        session.pop("pending_cover_token", None)
 
     return redirect(url_for("admin"))
 
@@ -413,35 +430,31 @@ def update_cover(manga_id):
     if title is None:
         abort(404)
 
-    def render_error(message):
+    cover_url = (request.form.get("cover_url") or "").strip()
+    if not cover_url:
         return render_template(
             "admin_edit_cover.html",
             manga_id=manga_id, manga_title=title,
             current_cover=mangadb.static_url(mangadb.get_manga_cover(manga_id)),
-            error=message,
+            error="Selecione uma imagem.",
         ), 400
 
-    cover_file = request.files.get("cover")
-    if not cover_file or not cover_file.filename:
-        return render_error("Selecione uma imagem.")
-
-    ext = sniff_image_extension(cover_file)
-    if ext is None:
-        return render_error("Arquivo não é uma imagem válida (png, jpg, webp).")
-
-    cover_path = save_manga_cover(manga_id, cover_file, ext)
-    mangadb.update_manga_cover(manga_id, cover_path)
+    mangadb.update_manga_cover(manga_id, cover_url)
     return redirect(url_for("admin"))
 
 
 def delete_page_files_if_unshared(pages):
-    """Apaga do disco cada página cujo image_path não é usado por nenhuma outra página
-    fora deste mesmo lote (protege dados de demonstração, que reaproveitam os mesmos
-    arquivos entre capítulos). Exclui o próprio lote da contagem, senão apagar várias
-    páginas que compartilham arquivo de uma vez (ex.: excluir o mangá inteiro) faria
-    nenhuma delas ser apagada."""
+    """Apaga do disco local cada página cujo image_path não é usado por nenhuma outra
+    página fora deste mesmo lote (protege dados de demonstração, que reaproveitam os
+    mesmos arquivos entre capítulos). Exclui o próprio lote da contagem, senão apagar
+    várias páginas que compartilham arquivo de uma vez (ex.: excluir o mangá inteiro)
+    faria nenhuma delas ser apagada. Páginas hospedadas no R2 (`image_path` é uma URL
+    http(s)) não são tocadas aqui - a limpeza delas acontece no navegador, via URL
+    DELETE pré-assinada (`/admin/.../r2-delete-urls`), antes deste form ser enviado."""
     batch_ids = [p["id"] for p in pages]
     for p in pages:
+        if is_r2_url(p["image_path"]):
+            continue
         if mangadb.count_pages_with_image_path(p["image_path"], exclude_ids=batch_ids) == 0:
             full_path = os.path.join(app.root_path, "static", *p["image_path"].split("/"))
             if os.path.exists(full_path):
@@ -458,7 +471,7 @@ def delete_manga_route(manga_id):
     cover = mangadb.get_manga_cover(manga_id)
 
     delete_page_files_if_unshared(pages)
-    if cover:
+    if cover and not is_r2_url(cover):
         cover_full_path = os.path.join(app.root_path, "static", *cover.split("/"))
         if os.path.exists(cover_full_path):
             os.remove(cover_full_path)
@@ -488,22 +501,30 @@ def new_chapter_form(manga_id):
     )
 
 
-def save_chapter_pages(manga_id, chapter_id, files, extensions):
-    """Salva as imagens de página em disco com nomes gerados pelo servidor
-    (nunca o nome original do upload) e devolve os caminhos relativos pra gravar no banco.
-    `extensions` já veio validada pelos bytes reais de cada arquivo (sniff_image_extension)."""
-    folder = os.path.join(app.root_path, "static", "assets", "pages", manga_id, chapter_id)
-    os.makedirs(folder, exist_ok=True)
+def _parse_page_urls(raw_json, allow_empty=False):
+    """Valida um campo oculto JSON (lista de {url, size}, montado pelo JS depois de
+    cada arquivo já ter sido enviado direto pro R2). Devolve uma lista de
+    (url, size_bytes) ou levanta ValueError com uma mensagem pro usuário."""
     try:
-        paths = []
-        for position, (file, ext) in enumerate(zip(files, extensions)):
-            filename = f"{position:03d}.{ext}"
-            file.save(os.path.join(folder, filename))
-            paths.append(f"assets/pages/{manga_id}/{chapter_id}/{filename}")
-        return paths
-    except Exception:
-        shutil.rmtree(folder, ignore_errors=True)
-        raise
+        items = json.loads(raw_json or "[]")
+    except (TypeError, ValueError):
+        raise ValueError("Não foi possível ler as páginas enviadas.")
+    if not isinstance(items, list):
+        raise ValueError("Não foi possível ler as páginas enviadas.")
+    if not items and not allow_empty:
+        raise ValueError("Selecione ao menos uma imagem de página.")
+
+    pages = []
+    for item in items:
+        if not isinstance(item, dict):
+            raise ValueError("Não foi possível ler as páginas enviadas.")
+        url = item.get("url")
+        if not is_r2_url(url):
+            raise ValueError("Não foi possível ler as páginas enviadas.")
+        size = item.get("size")
+        size_bytes = int(size) if isinstance(size, (int, float)) else None
+        pages.append((url, size_bytes))
+    return pages
 
 
 @app.route("/admin/mangas/<manga_id>/chapters", methods=["POST"])
@@ -530,30 +551,19 @@ def create_chapter(manga_id):
     except mangadb.ValidationError as e:
         return render_error(str(e))
 
-    files = [f for f in request.files.getlist("pages") if f and f.filename]
-    if not files:
-        return render_error("Selecione ao menos uma imagem de página.")
-
-    extensions = []
-    for file in files:
-        ext = sniff_image_extension(file)
-        if ext is None:
-            return render_error(f"Arquivo '{file.filename}' não é uma imagem válida (png, jpg, webp).")
-        extensions.append(ext)
+    try:
+        pages = _parse_page_urls(request.form.get("page_urls"))
+    except ValueError as e:
+        return render_error(str(e))
 
     chapter_id = mangadb.build_chapter_id(manga_id, number_val)
-    page_paths = save_chapter_pages(manga_id, chapter_id, files, extensions)
 
     try:
         mangadb.add_chapter(
             manga_id=manga_id, chapter_id=chapter_id, number_val=number_val, title=title,
-            release_date=release_date, page_paths=page_paths,
+            release_date=release_date, pages=pages,
         )
     except mangadb.ValidationError as e:
-        shutil.rmtree(
-            os.path.join(app.root_path, "static", "assets", "pages", manga_id, chapter_id),
-            ignore_errors=True,
-        )
         return render_error(str(e))
 
     return redirect(url_for("admin"))
@@ -589,20 +599,6 @@ def edit_chapter_form(manga_id, chapter_id):
     return render_edit_chapter(manga_id, mangadb.get_manga_title(manga_id), chapter)
 
 
-def append_chapter_pages(manga_id, chapter_id, files, extensions):
-    """Salva páginas novas adicionadas na edição. A pasta do capítulo já pode ter
-    arquivos de antes, então (diferente de save_chapter_pages) usa nome por token
-    aleatório em vez de posição, pra nunca colidir com um arquivo já existente."""
-    folder = os.path.join(app.root_path, "static", "assets", "pages", manga_id, chapter_id)
-    os.makedirs(folder, exist_ok=True)
-    paths = []
-    for file, ext in zip(files, extensions):
-        filename = f"{secrets.token_hex(8)}.{ext}"
-        file.save(os.path.join(folder, filename))
-        paths.append(f"assets/pages/{manga_id}/{chapter_id}/{filename}")
-    return paths
-
-
 @app.route("/admin/mangas/<manga_id>/chapters/<chapter_id>/edit", methods=["POST"])
 @login_required
 def update_chapter(manga_id, chapter_id):
@@ -622,14 +618,18 @@ def update_chapter(manga_id, chapter_id):
     except mangadb.ValidationError as e:
         return reject(str(e))
 
-    new_files = request.files.getlist("new_pages")
+    try:
+        new_pages = _parse_page_urls(request.form.get("new_pages"), allow_empty=True)
+    except ValueError as e:
+        return reject(str(e))
+
     existing_ids = {p["id"] for p in chapter["pages"]}
 
     # -- interpreta e valida o `order` montado pelo JS, sem confiar em nada do cliente --
     tokens = [t for t in (request.form.get("order") or "").split(",") if t]
     seen_existing = set()
     seen_new = set()
-    final_entries = []  # ("existing", page_id) ou ("new", índice em new_files)
+    final_entries = []  # ("existing", page_id) ou ("new", índice em new_pages)
     for tok in tokens:
         kind, raw = tok[0], tok[1:]
         if kind == "e":
@@ -639,7 +639,7 @@ def update_chapter(manga_id, chapter_id):
             seen_existing.add(pid)
             final_entries.append(("existing", pid))
         elif kind == "n":
-            if not raw.isdigit() or int(raw) >= len(new_files) or int(raw) in seen_new:
+            if not raw.isdigit() or int(raw) >= len(new_pages) or int(raw) in seen_new:
                 return reject("Ordem de páginas inválida.")
             idx = int(raw)
             seen_new.add(idx)
@@ -650,24 +650,8 @@ def update_chapter(manga_id, chapter_id):
     if not final_entries:
         return reject("O capítulo precisa de pelo menos uma página.")
 
-    # só valida (bytes reais) os arquivos que de fato serão usados
-    extensions_by_index = {}
-    for idx in seen_new:
-        ext = sniff_image_extension(new_files[idx])
-        if ext is None:
-            return reject(f"Arquivo '{new_files[idx].filename}' não é uma imagem válida (png, jpg, webp).")
-        extensions_by_index[idx] = ext
-
     removed_ids = [p["id"] for p in chapter["pages"] if p["id"] not in seen_existing]
     removed_pages = mangadb.get_pages_by_ids(removed_ids)
-
-    saved_paths_by_index = {}
-    if seen_new:
-        ordered_indexes = sorted(seen_new)
-        files_to_save = [new_files[i] for i in ordered_indexes]
-        exts_to_save = [extensions_by_index[i] for i in ordered_indexes]
-        saved_paths = append_chapter_pages(manga_id, chapter_id, files_to_save, exts_to_save)
-        saved_paths_by_index = dict(zip(ordered_indexes, saved_paths))
 
     mangadb.update_chapter_metadata(chapter_id, number_val, title, release_date)
 
@@ -678,7 +662,8 @@ def update_chapter(manga_id, chapter_id):
         if kind == "existing":
             mangadb.set_page_position(ref, position)
         else:
-            mangadb.insert_page(chapter_id, position, saved_paths_by_index[ref])
+            url, size_bytes = new_pages[ref]
+            mangadb.insert_page(chapter_id, position, url, size_bytes)
 
     return redirect(url_for("chapters_list", manga_id=manga_id))
 

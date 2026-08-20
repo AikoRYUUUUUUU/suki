@@ -42,7 +42,8 @@
               <button type="button" class="btn btn-danger js-delete-trigger"
                       data-target-form="delete-chapter-{{ c.id }}"
                       data-name="Cap. {{ format_number(c.number) }} — {{ c.title }}"
-                      data-detail="e {{ c.page_count }} página{{ 's' if c.page_count != 1 else '' }}">Excluir</button>
+                      data-detail="e {{ c.page_count }} página{{ 's' if c.page_count != 1 else '' }}"
+                      data-r2-lookup-url="{{ url_for('chapter_r2_delete_urls', manga_id=manga_id, chapter_id=c.id) }}">Excluir</button>
               <form id="delete-chapter-{{ c.id }}" action="{{ url_for('delete_chapter_route', manga_id=manga_id, chapter_id=c.id) }}" method="post" style="display:none;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               </form>
@@ -66,6 +67,7 @@
   </div>
 </dialog>
 
+<script src="{{ url_for('static', filename='js/admin_uploads.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin_confirm_delete.js') }}"></script>
 </body>
 </html>

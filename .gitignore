@@ -10,6 +10,3 @@ __pycache__/
 *.pyc
 venv/
 .venv/
-
-# uploads temporários do admin (nunca fazem parte do repo)
-static/assets/covers/_pending/

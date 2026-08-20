@@ -32,7 +32,7 @@
       <p class="admin-error">{{ error }}</p>
     {% endif %}
 
-    <form class="admin-form" action="{{ url_for('preview_manga') }}" method="post" enctype="multipart/form-data">
+    <form class="admin-form" action="{{ url_for('preview_manga') }}" method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <label for="title">Título</label>
@@ -63,7 +63,9 @@
       <input type="text" id="rating" name="rating" inputmode="decimal">
 
       <label for="cover">Capa</label>
-      <input type="file" id="cover" name="cover" accept="image/png,image/jpeg,image/webp">
+      <input type="file" id="cover" accept="image/png,image/jpeg,image/webp">
+      <input type="hidden" id="cover_url" name="cover_url" value="">
+      <div id="cover-upload-preview" class="cover-upload-preview"></div>
       <p class="admin-hint">Opcional agora - dá pra adicionar ou trocar depois pelo painel.</p>
 
       <label for="artist">Artista</label>
@@ -112,6 +114,8 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/admin_uploads.js') }}"></script>
 <script src="{{ url_for('static', filename='js/manga_autofill.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin_new_manga.js') }}"></script>
 </body>
 </html>

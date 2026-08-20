@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS pages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     chapter_id TEXT NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
     position INTEGER NOT NULL,
-    image_path TEXT NOT NULL
+    image_path TEXT NOT NULL,
+    size_bytes INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_chapters_manga ON chapters(manga_id);

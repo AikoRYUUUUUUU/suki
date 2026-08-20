@@ -119,27 +119,7 @@
     return true;
   }
 
-  function showToast(type, message) {
-    let stack = document.getElementById("toast-stack");
-    if (!stack) {
-      stack = document.createElement("div");
-      stack.id = "toast-stack";
-      stack.className = "toast-stack";
-      document.body.appendChild(stack);
-    }
-    const toast = document.createElement("div");
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `<span>${message}</span>`;
-    const close = document.createElement("button");
-    close.type = "button";
-    close.className = "toast-close";
-    close.setAttribute("aria-label", "Fechar aviso");
-    close.textContent = "×";
-    close.addEventListener("click", () => toast.remove());
-    toast.appendChild(close);
-    stack.appendChild(toast);
-    setTimeout(() => toast.remove(), 8000);
-  }
+  // showToast() vem de admin_uploads.js (carregado antes deste script).
 
   async function runAutofill() {
     const titleInput = document.getElementById("title");

@@ -119,6 +119,20 @@ form.admin-form > label:first-of-type { margin-top: 0; }
   align-items: center;
 }
 
+.btn:disabled {
+  opacity: .5;
+  cursor: wait;
+  pointer-events: none;
+}
+
+.cover-upload-preview { margin-top: 10px; }
+.cover-upload-preview img {
+  max-width: 160px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  display: block;
+}
+
 .confirm-preview {
   display: flex;
   gap: 28px;
@@ -183,6 +197,10 @@ form.admin-form > label:first-of-type { margin-top: 0; }
 }
 .page-item.dragging { opacity: .35; }
 .page-item.drag-over { border-color: var(--gold); transform: scale(1.03); }
+.page-item.uploading { opacity: .55; cursor: wait; }
+.page-item.uploading .page-order-badge { background: var(--gold); color: var(--ink); }
+.page-item.upload-failed { border-color: var(--vermillion); }
+.page-item.upload-failed .page-order-badge { background: var(--vermillion); }
 .page-item .thumb {
   width: 100%;
   height: 88px;

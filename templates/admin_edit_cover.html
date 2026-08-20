@@ -40,11 +40,12 @@
       {% endif %}
     </div>
 
-    <form class="admin-form" action="{{ url_for('update_cover', manga_id=manga_id) }}" method="post" enctype="multipart/form-data">
+    <form id="edit-cover-form" class="admin-form" action="{{ url_for('update_cover', manga_id=manga_id) }}" method="post" data-old-cover="{{ current_cover or '' }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" id="cover_url" name="cover_url" value="">
 
       <label for="cover">Nova capa</label>
-      <input type="file" id="cover" name="cover" accept="image/png,image/jpeg,image/webp" required>
+      <input type="file" id="cover" accept="image/png,image/jpeg,image/webp" required>
 
       <div class="admin-actions">
         <button type="submit" class="btn btn-primary">Salvar capa</button>
@@ -54,5 +55,7 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/admin_uploads.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin_edit_cover.js') }}"></script>
 </body>
 </html>

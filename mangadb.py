@@ -38,8 +38,19 @@ def init_db():
         schema = f.read()
     conn = get_connection()
     conn.executescript(schema)
+    _migrate_pages_size_bytes(conn)
     conn.commit()
     conn.close()
+
+
+def _migrate_pages_size_bytes(conn):
+    """`CREATE TABLE IF NOT EXISTS` não altera uma tabela `pages` já existente
+    (banco de produção criado antes da coluna `size_bytes` existir) - então essa
+    migração roda toda vez que o app sobe (idempotente, barata) e adiciona a
+    coluna se ainda não estiver lá."""
+    columns = [row["name"] for row in conn.execute("PRAGMA table_info(pages)")]
+    if "size_bytes" not in columns:
+        conn.execute("ALTER TABLE pages ADD COLUMN size_bytes INTEGER")
 
 
 def slugify(text):
@@ -488,8 +499,9 @@ def build_chapter_id(manga_id, number_val):
         conn.close()
 
 
-def add_chapter(manga_id, chapter_id, number_val, title, release_date, page_paths):
-    if not page_paths:
+def add_chapter(manga_id, chapter_id, number_val, title, release_date, pages):
+    """`pages` é uma lista de (image_path, size_bytes)."""
+    if not pages:
         raise ValidationError("Selecione ao menos uma imagem de página.")
 
     conn = get_connection()
@@ -502,11 +514,11 @@ def add_chapter(manga_id, chapter_id, number_val, title, release_date, page_path
             VALUES (?, ?, ?, ?, ?)
         """, (chapter_id, manga_id, number_val, title, release_date or None))
 
-        for position, path in enumerate(page_paths):
+        for position, (path, size_bytes) in enumerate(pages):
             conn.execute("""
-                INSERT INTO pages (chapter_id, position, image_path)
-                VALUES (?, ?, ?)
-            """, (chapter_id, position, path))
+                INSERT INTO pages (chapter_id, position, image_path, size_bytes)
+                VALUES (?, ?, ?, ?)
+            """, (chapter_id, position, path, size_bytes))
 
         conn.commit()
     finally:
@@ -600,11 +612,11 @@ def set_page_position(page_id, position):
     conn.close()
 
 
-def insert_page(chapter_id, position, image_path):
+def insert_page(chapter_id, position, image_path, size_bytes=None):
     conn = get_connection()
     conn.execute(
-        "INSERT INTO pages (chapter_id, position, image_path) VALUES (?, ?, ?)",
-        (chapter_id, position, image_path),
+        "INSERT INTO pages (chapter_id, position, image_path, size_bytes) VALUES (?, ?, ?, ?)",
+        (chapter_id, position, image_path, size_bytes),
     )
     conn.commit()
     conn.close()

@@ -32,8 +32,9 @@
       <p class="admin-error">{{ error }}</p>
     {% endif %}
 
-    <form class="admin-form" action="{{ url_for('create_chapter', manga_id=manga_id) }}" method="post" enctype="multipart/form-data">
+    <form id="new-chapter-form" class="admin-form" action="{{ url_for('create_chapter', manga_id=manga_id) }}" method="post" data-manga-id="{{ manga_id }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" id="page_urls" name="page_urls" value="">
 
       <label for="number">Número do capítulo</label>
       <input type="text" id="number" name="number" inputmode="decimal" value="{{ next_number }}" required>
@@ -45,16 +46,19 @@
       <input type="date" id="release_date" name="release_date" value="{{ today }}" required>
 
       <label for="pages">Páginas (imagens)</label>
-      <input type="file" id="pages" name="pages" accept="image/png,image/jpeg,image/webp" multiple required>
+      <input type="file" id="pages" accept="image/png,image/jpeg,image/webp" multiple required>
       <p class="admin-hint">PNG, JPG ou WEBP. Selecione todas as páginas do capítulo de uma vez, na ordem de leitura.</p>
+      <div id="pages-upload-preview" class="page-manager"></div>
 
       <div class="admin-actions">
-        <button type="submit" class="btn btn-primary">Adicionar capítulo</button>
+        <button type="submit" id="new-chapter-submit" class="btn btn-primary">Adicionar capítulo</button>
         <a class="btn btn-ghost" href="{{ url_for('admin') }}">Cancelar</a>
       </div>
     </form>
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/admin_uploads.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin_new_chapter.js') }}"></script>
 </body>
 </html>

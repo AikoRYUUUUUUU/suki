@@ -32,9 +32,10 @@
       <p class="admin-error">{{ error }}</p>
     {% endif %}
 
-    <form id="edit-chapter-form" class="admin-form" action="{{ url_for('update_chapter', manga_id=manga_id, chapter_id=chapter.id) }}" method="post" enctype="multipart/form-data">
+    <form id="edit-chapter-form" class="admin-form" action="{{ url_for('update_chapter', manga_id=manga_id, chapter_id=chapter.id) }}" method="post" data-manga-id="{{ manga_id }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" id="order-input" name="order" value="">
+      <input type="hidden" id="new-pages-input" name="new_pages" value="">
 
       <label for="number">Número do capítulo</label>
       <input type="text" id="number" name="number" inputmode="decimal" value="{{ format_number(chapter.number) }}" required>
@@ -52,17 +53,17 @@
       <p class="admin-hint">Arraste pra reordenar. Clique no × pra remover uma página.</p>
       <div id="page-manager" class="page-manager"></div>
       <input type="file" id="new_pages_picker" accept="image/png,image/jpeg,image/webp" multiple style="display:none;">
-      <input type="file" id="new_pages_submit" name="new_pages" multiple style="display:none;">
       <script type="application/json" id="initial-pages">{{ pages|tojson }}</script>
 
       <div class="admin-actions">
-        <button type="submit" class="btn btn-primary">Salvar alterações</button>
+        <button type="submit" id="edit-chapter-submit" class="btn btn-primary">Salvar alterações</button>
         <a class="btn btn-ghost" href="{{ url_for('chapters_list', manga_id=manga_id) }}">Cancelar</a>
       </div>
     </form>
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/admin_uploads.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin_chapter_editor.js') }}"></script>
 </body>
 </html>
