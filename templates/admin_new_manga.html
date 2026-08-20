@@ -36,7 +36,11 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <label for="title">Título</label>
-      <input type="text" id="title" name="title" required>
+      <div class="field-row">
+        <input type="text" id="title" name="title" required>
+        <button type="button" id="autofill-btn" class="btn btn-ghost">Buscar dados</button>
+      </div>
+      <p class="admin-hint">Busca título original, sinopse, ano, status, tags e autor/artista no AniList a partir do título acima.</p>
 
       <label for="title_original">Título original</label>
       <input type="text" id="title_original" name="title_original">
@@ -108,5 +112,6 @@
   </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/manga_autofill.js') }}"></script>
 </body>
 </html>
