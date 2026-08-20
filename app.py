@@ -49,7 +49,7 @@ CSP = (
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com; "
     "connect-src 'self' https://cusdis.com https://graphql.anilist.co; "
-    "frame-ancestors 'none'; "
+    "frame-ancestors 'self'; "
     "base-uri 'self'; "
     "form-action 'self'; "
     "object-src 'none'"
@@ -60,7 +60,7 @@ CSP = (
 @app.after_request
 def set_security_headers(response):
     response.headers["Content-Security-Policy"] = CSP
-    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
