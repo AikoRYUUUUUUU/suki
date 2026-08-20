@@ -208,6 +208,9 @@ def effective_rating(row):
 
 
 def get_all_mangas_full():
+    """Monta o catálogo inteiro em 4 queries fixas (independente de quantos mangás/
+    capítulos existirem), em vez de uma query de gêneros e uma de capítulos por manga
+    mais uma de páginas por capítulo - isso ficava mais lento a cada título novo."""
     conn = get_connection()
     mangas = conn.execute("""
         SELECT m.*, a.name AS author_name, g.name AS group_name
@@ -217,31 +220,30 @@ def get_all_mangas_full():
         ORDER BY m.title
     """).fetchall()
 
+    genres_by_manga = {}
+    for r in conn.execute("""
+        SELECT mt.manga_id, t.name FROM tags t
+        JOIN manga_tags mt ON mt.tag_id = t.id
+        ORDER BY t.name
+    """):
+        genres_by_manga.setdefault(r["manga_id"], []).append(r["name"])
+
+    pages_by_chapter = {}
+    for r in conn.execute("SELECT chapter_id, image_path FROM pages ORDER BY chapter_id, position"):
+        pages_by_chapter.setdefault(r["chapter_id"], []).append(static_url(r["image_path"]))
+
+    chapters_by_manga = {}
+    for c in conn.execute("SELECT * FROM chapters ORDER BY manga_id, number"):
+        chapters_by_manga.setdefault(c["manga_id"], []).append({
+            "id": c["id"],
+            "number": c["number"],
+            "title": c["title"],
+            "releaseDate": c["release_date"],
+            "pages": pages_by_chapter.get(c["id"], []),
+        })
+
     result = []
     for m in mangas:
-        genres = [r["name"] for r in conn.execute("""
-            SELECT t.name FROM tags t
-            JOIN manga_tags mt ON mt.tag_id = t.id
-            WHERE mt.manga_id = ?
-            ORDER BY t.name
-        """, (m["id"],))]
-
-        chapters = []
-        for c in conn.execute(
-            "SELECT * FROM chapters WHERE manga_id = ? ORDER BY number", (m["id"],)
-        ):
-            pages = [static_url(r["image_path"]) for r in conn.execute(
-                "SELECT image_path FROM pages WHERE chapter_id = ? ORDER BY position",
-                (c["id"],),
-            )]
-            chapters.append({
-                "id": c["id"],
-                "number": c["number"],
-                "title": c["title"],
-                "releaseDate": c["release_date"],
-                "pages": pages,
-            })
-
         result.append({
             "id": m["id"],
             "title": m["title"],
@@ -251,12 +253,12 @@ def get_all_mangas_full():
             "group": m["group_name"],
             "status": m["status"],
             "year": m["year"],
-            "genres": genres,
+            "genres": genres_by_manga.get(m["id"], []),
             "rating": effective_rating(m),
             "ratingCount": m["rating_count"],
             "cover": static_url(m["cover"]),
             "synopsis": m["synopsis"],
-            "chapters": chapters,
+            "chapters": chapters_by_manga.get(m["id"], []),
         })
 
     conn.close()
