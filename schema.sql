@@ -79,3 +79,10 @@ CREATE TABLE IF NOT EXISTS pending_comment_approvals (
 CREATE INDEX IF NOT EXISTS idx_chapters_manga ON chapters(manga_id);
 CREATE INDEX IF NOT EXISTS idx_pages_chapter ON pages(chapter_id);
 CREATE INDEX IF NOT EXISTS idx_manga_tags_manga ON manga_tags(manga_id);
+CREATE INDEX IF NOT EXISTS idx_manga_tags_tag ON manga_tags(tag_id);
+
+-- índices de expressão: get_or_create_tag/get_or_create_author buscam por
+-- lower(name), que não usa o índice UNIQUE comum de `name` (esse é sobre a
+-- coluna crua, não sobre o resultado de lower()).
+CREATE INDEX IF NOT EXISTS idx_tags_name_lower ON tags(lower(name));
+CREATE INDEX IF NOT EXISTS idx_authors_name_lower ON authors(lower(name));

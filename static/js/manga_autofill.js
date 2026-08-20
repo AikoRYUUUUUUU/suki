@@ -45,6 +45,7 @@
     "reverse harem": "Harém",
     "boys' love": "Yaoi",
     "girls' love": "Yuri",
+    "long strip": "Webtoon",
     "shounen": "Shounen",
     "shoujo": "Shoujo",
     "seinen": "Seinen",

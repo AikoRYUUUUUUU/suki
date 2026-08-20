@@ -70,10 +70,10 @@
       </select>
 
       <label for="year">Ano</label>
-      <input type="text" id="year" name="year" inputmode="numeric" value="{{ request.form.get('year', manga.year if manga.year is not none else '') }}">
+      <input type="number" id="year" name="year" inputmode="numeric" min="1900" max="2100" step="1" value="{{ request.form.get('year', manga.year if manga.year is not none else '') }}">
 
       <label for="rating">Avaliação (0 a 5)</label>
-      <input type="text" id="rating" name="rating" inputmode="decimal" value="{{ request.form.get('rating', manga.rating if manga.rating is not none else '') }}">
+      <input type="number" id="rating" name="rating" inputmode="decimal" min="0" max="5" step="0.1" value="{{ request.form.get('rating', manga.rating if manga.rating is not none else '') }}">
 
       <label for="artist">Artista</label>
       <input type="text" id="artist" name="artist" value="{{ request.form.get('artist', manga.artist or '') }}">
