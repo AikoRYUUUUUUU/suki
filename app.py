@@ -32,6 +32,7 @@ ADMIN_PASSWORD_HASH = os.environ["ADMIN_PASSWORD_HASH"]
 GITHUB_WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET")
 WSGI_FILE_PATH = os.environ.get("WSGI_FILE_PATH")
 CUSDIS_APP_ID = os.environ.get("CUSDIS_APP_ID")
+CUSDIS_WEBHOOK_SECRET = os.environ.get("CUSDIS_WEBHOOK_SECRET")
 
 csrf = CSRFProtect(app)
 limiter = Limiter(get_remote_address, app=app, default_limits=[])
@@ -166,6 +167,36 @@ def deploy():
         print(f"[deploy] falhou: {e}")
         return "error", 500
 
+    return "ok", 200
+
+
+# ---------- webhook do Cusdis (fila de aprovação automática de comentários) ----------
+
+@app.route("/webhooks/cusdis/<secret>", methods=["POST"])
+@csrf.exempt
+@limiter.limit("30 per minute")
+def cusdis_webhook(secret):
+    """O Cusdis não assina o payload do webhook, então o segredo na própria URL
+    é a única barreira contra POST forjado - abort(404) em vez de 403 pra não
+    confirmar pra quem tentar adivinhar que essa rota existe."""
+    if not CUSDIS_WEBHOOK_SECRET or secret != CUSDIS_WEBHOOK_SECRET:
+        abort(404)
+
+    payload = request.get_json(silent=True) or {}
+    if payload.get("type") != "new_comment":
+        return "ignored", 200
+
+    data = payload.get("data") or {}
+    approve_link = data.get("approve_link")
+    if not approve_link:
+        return "ignored", 200
+
+    mangadb.add_pending_approval(
+        approve_link=approve_link,
+        nickname=data.get("by_nickname"),
+        content=data.get("content"),
+        page_title=data.get("page_title"),
+    )
     return "ok", 200
 
 
@@ -390,6 +421,19 @@ def migration_commit():
         return jsonify({"ok": True})
 
     abort(400)
+
+
+@app.route("/admin/comments/pending-approvals", methods=["GET"])
+@login_required
+def pending_approvals():
+    return jsonify({"items": mangadb.get_pending_approvals()})
+
+
+@app.route("/admin/comments/pending-approvals/<int:approval_id>/done", methods=["POST"])
+@login_required
+def pending_approval_done(approval_id):
+    mangadb.delete_pending_approval(approval_id)
+    return jsonify({"ok": True})
 
 
 @app.route("/admin/mangas/<manga_id>/status", methods=["POST"])

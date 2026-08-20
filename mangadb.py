@@ -2,7 +2,7 @@ import os
 import re
 import sqlite3
 import unicodedata
-from datetime import date
+from datetime import date, datetime
 
 DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "mangadb.db"))
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
@@ -710,3 +710,38 @@ def add_vote(manga_id, voter_hash, value):
     ).fetchone()
     conn.close()
     return effective_rating(row), row["rating_count"]
+
+
+# ---------- fila de aprovação automática de comentários (Cusdis) ----------
+
+def add_pending_approval(approve_link, nickname, content, page_title):
+    """Um webhook duplicado do Cusdis (reenvio automático deles) bate na mesma
+    UNIQUE(approve_link) - ignora silenciosamente em vez de duplicar a fila."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            "INSERT INTO pending_comment_approvals (approve_link, nickname, content, page_title, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (approve_link, nickname, content, page_title, datetime.utcnow().isoformat()),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        pass
+    finally:
+        conn.close()
+
+
+def get_pending_approvals():
+    conn = get_connection()
+    rows = [dict(r) for r in conn.execute(
+        "SELECT id, approve_link, nickname, content, page_title FROM pending_comment_approvals ORDER BY id"
+    )]
+    conn.close()
+    return rows
+
+
+def delete_pending_approval(approval_id):
+    conn = get_connection()
+    conn.execute("DELETE FROM pending_comment_approvals WHERE id = ?", (approval_id,))
+    conn.commit()
+    conn.close()

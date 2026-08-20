@@ -63,6 +63,19 @@ CREATE TABLE IF NOT EXISTS votes (
     PRIMARY KEY (manga_id, voter_hash)
 );
 
+-- Fila de aprovação automática de comentários do Cusdis: o webhook deles chega
+-- aqui (entrada, sem custo de saída bloqueada pelo free-tier), fica guardado
+-- até o navegador do admin (a próxima vez que o painel carregar) buscar essa
+-- fila e clicar o approve_link de cada um sozinho.
+CREATE TABLE IF NOT EXISTS pending_comment_approvals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    approve_link TEXT NOT NULL UNIQUE,
+    nickname TEXT,
+    content TEXT,
+    page_title TEXT,
+    created_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_chapters_manga ON chapters(manga_id);
 CREATE INDEX IF NOT EXISTS idx_pages_chapter ON pages(chapter_id);
 CREATE INDEX IF NOT EXISTS idx_manga_tags_manga ON manga_tags(manga_id);
