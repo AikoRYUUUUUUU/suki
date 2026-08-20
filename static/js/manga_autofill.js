@@ -98,6 +98,14 @@
     return names;
   }
 
+  async function translateToPortuguese(text) {
+    const url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=pt&dt=t&q=" + encodeURIComponent(text);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    return (data[0] || []).map((segment) => segment[0]).join("");
+  }
+
   async function searchAniList(title) {
     const res = await fetch(ANILIST_ENDPOINT, {
       method: "POST",
@@ -149,7 +157,21 @@
       const nativeTitle = media.title && (media.title.native || media.title.romaji);
       if (setField("title_original", nativeTitle)) filled.push("título original"); else missing.push("título original");
 
-      if (setField("synopsis", stripHtml(media.description))) filled.push("sinopse"); else missing.push("sinopse");
+      const synopsisEn = stripHtml(media.description);
+      let synopsisFinal = synopsisEn;
+      let translationFailed = false;
+      if (synopsisEn) {
+        try {
+          synopsisFinal = await translateToPortuguese(synopsisEn);
+        } catch (e) {
+          translationFailed = true;
+        }
+      }
+      if (setField("synopsis", synopsisFinal)) {
+        filled.push(translationFailed ? "sinopse (em inglês — tradução falhou)" : "sinopse");
+      } else {
+        missing.push("sinopse");
+      }
 
       const year = media.startDate && media.startDate.year;
       if (year && setField("year", String(year))) filled.push("ano"); else missing.push("ano");
