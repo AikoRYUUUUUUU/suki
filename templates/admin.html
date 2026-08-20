@@ -63,7 +63,7 @@
             <h3>{{ m.title }}</h3>
             <form class="status-inline" action="{{ url_for('update_status', manga_id=m.id) }}" method="post">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <select name="status" onchange="this.form.requestSubmit()">
+              <select name="status" class="status-select">
                 {% for s in statuses %}
                   <option value="{{ s }}" {{ "selected" if s == m.status else "" }}>{{ s }}</option>
                 {% endfor %}
@@ -110,5 +110,6 @@
 <script src="{{ url_for('static', filename='js/admin_confirm_delete.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin_migration.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin_comment_approvals.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin_dashboard.js') }}"></script>
 </body>
 </html>

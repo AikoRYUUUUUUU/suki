@@ -42,6 +42,29 @@ with app.app_context():
     mangadb.init_db()
 
 
+CSP = (
+    "default-src 'self'; "
+    "img-src 'self' https://*.r2.dev; "
+    "script-src 'self' https://cusdis.com; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com; "
+    "connect-src 'self' https://cusdis.com https://graphql.anilist.co; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "object-src 'none'"
+)  # se a URL pública do R2 (R2_PUBLIC_BASE_URL) virar um domínio próprio em vez de
+   # *.r2.dev, o img-src acima precisa ser atualizado junto
+
+
+@app.after_request
+def set_security_headers(response):
+    response.headers["Content-Security-Policy"] = CSP
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
 def is_r2_url(path):
     return bool(path) and path.startswith(("http://", "https://"))
 
@@ -179,7 +202,7 @@ def cusdis_webhook(secret):
     """O Cusdis não assina o payload do webhook, então o segredo na própria URL
     é a única barreira contra POST forjado - abort(404) em vez de 403 pra não
     confirmar pra quem tentar adivinhar que essa rota existe."""
-    if not CUSDIS_WEBHOOK_SECRET or secret != CUSDIS_WEBHOOK_SECRET:
+    if not CUSDIS_WEBHOOK_SECRET or not hmac.compare_digest(secret, CUSDIS_WEBHOOK_SECRET):
         abort(404)
 
     payload = request.get_json(silent=True) or {}
