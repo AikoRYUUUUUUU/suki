@@ -11,6 +11,18 @@
 <header class="topbar">
   <div class="wrap">
     <a href="/" class="brand"><span class="stamp">墨</span> Sumi</a>
+    <form class="topbar-search" role="search" onsubmit="return false;">
+      <svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true">
+        <path d="M13.61 12.2h-.7l-.25-.24a5.8 5.8 0 1 0-.62.62l.24.25v.7l4.46 4.45 1.33-1.33-4.46-4.45zm-5.35 0a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/>
+      </svg>
+      <input type="text" id="search-input" placeholder="Buscar por nome, autor, grupo, tag ou gênero…">
+      <select id="search-status" aria-label="Filtrar por status">
+        <option value="">Status</option>
+        {% for s in statuses %}
+          <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+    </form>
     <nav class="nav-links">
       <a href="/">Biblioteca</a>
       <a href="/#lancamentos">Lançamentos</a>
@@ -39,16 +51,6 @@
   <div class="wrap">
     <p class="eyebrow">Biblioteca</p>
     <h2 class="section-title">Todos os títulos</h2>
-
-    <form class="search-bar" onsubmit="return false;">
-      <input type="text" id="search-input" placeholder="Buscar por nome, autor, grupo, tag ou gênero…">
-      <select id="search-status">
-        <option value="">Todos os status</option>
-        {% for s in statuses %}
-          <option value="{{ s }}">{{ s }}</option>
-        {% endfor %}
-      </select>
-    </form>
 
     <div class="grid-covers" id="grid-covers"></div>
     <p class="empty-state" id="search-empty" hidden>Nenhum mangá encontrado para essa busca.</p>

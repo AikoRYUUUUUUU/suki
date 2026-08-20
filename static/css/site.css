@@ -59,6 +59,7 @@ img { max-width: 100%; display: block; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 24px;
   height: 68px;
 }
 .brand {
@@ -86,8 +87,54 @@ img { max-width: 100%; display: block; }
   gap: 28px;
   font-size: 14px;
   color: var(--paper-dim);
+  flex-shrink: 0;
 }
 .nav-links a:hover { color: var(--paper); }
+
+.topbar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  max-width: 440px;
+  margin: 0 auto;
+  height: 38px;
+  padding: 0 14px;
+  background: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+}
+.topbar-search .search-icon {
+  width: 14px;
+  height: 14px;
+  fill: var(--gray);
+  flex-shrink: 0;
+}
+.topbar-search input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  height: 100%;
+}
+.topbar-search input[type="text"]::placeholder { color: var(--gray); }
+.topbar-search input[type="text"]:focus { outline: none; }
+.topbar-search select {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--line);
+  color: var(--paper-dim);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  height: 100%;
+  padding-left: 10px;
+  cursor: pointer;
+}
+.topbar-search select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 /* ---------- eyebrow / section headers ---------- */
 .eyebrow {
@@ -187,28 +234,6 @@ img { max-width: 100%; display: block; }
 /* ---------- grade de capas ---------- */
 .shelf {
   padding: 64px 0;
-}
-.search-bar {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 28px;
-}
-.search-bar input[type="text"],
-.search-bar select {
-  padding: 12px 14px;
-  background: var(--ink-soft);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  color: var(--paper);
-  font-family: var(--font-body);
-  font-size: 14px;
-}
-.search-bar input[type="text"] { flex: 1; min-width: 240px; }
-.search-bar input:focus,
-.search-bar select:focus {
-  outline: 2px solid var(--gold);
-  outline-offset: 1px;
 }
 .empty-state {
   color: var(--gray);
@@ -459,4 +484,6 @@ body.reader-body {
   .manga-hero .wrap { grid-template-columns: 1fr; }
   .manga-hero .cover-frame { width: 180px; }
   .nav-links { display: none; }
+  .topbar-search { max-width: none; }
+  .topbar-search select { display: none; }
 }
