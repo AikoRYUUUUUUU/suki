@@ -83,13 +83,15 @@ def get_groups():
 def get_dashboard_mangas():
     conn = get_connection()
     rows = [dict(r) for r in conn.execute("""
-        SELECT m.id, m.title, m.status, COUNT(c.id) AS chapter_count
+        SELECT m.id, m.title, m.status, m.cover, COUNT(c.id) AS chapter_count
         FROM mangas m
         LEFT JOIN chapters c ON c.manga_id = m.id
         GROUP BY m.id
         ORDER BY m.title
     """)]
     conn.close()
+    for row in rows:
+        row["cover"] = static_url(row["cover"])
     return rows
 
 
@@ -339,6 +341,60 @@ def update_manga_status(manga_id, status):
     conn.execute("UPDATE mangas SET status = ? WHERE id = ?", (status, manga_id))
     conn.commit()
     conn.close()
+
+
+def get_manga_edit_data(manga_id):
+    conn = get_connection()
+    row = conn.execute("""
+        SELECT m.*, a.name AS author_name
+        FROM mangas m
+        LEFT JOIN authors a ON a.id = m.author_id
+        WHERE m.id = ?
+    """, (manga_id,)).fetchone()
+    if not row:
+        conn.close()
+        return None
+    tag_names = [r["name"] for r in conn.execute("""
+        SELECT t.name FROM tags t
+        JOIN manga_tags mt ON mt.tag_id = t.id
+        WHERE mt.manga_id = ?
+        ORDER BY t.name
+    """, (manga_id,))]
+    conn.close()
+    return {
+        "id": row["id"], "title": row["title"], "title_original": row["title_original"],
+        "author_name": row["author_name"], "artist": row["artist"], "group_id": row["group_id"],
+        "status": row["status"], "year": row["year"], "rating": row["rating"],
+        "cover": static_url(row["cover"]), "synopsis": row["synopsis"], "tag_names": tag_names,
+    }
+
+
+def update_manga(manga_id, title, synopsis, status, tags, author, group_id,
+                  title_original=None, artist=None, year=None, rating=None):
+    f = validate_manga_fields(title, synopsis, status, tags, author, group_id, year, rating)
+
+    conn = get_connection()
+    try:
+        author_id_val = get_or_create_author(conn, f["author"]) if f["author"] else None
+
+        conn.execute("""
+            UPDATE mangas SET title = ?, title_original = ?, author_id = ?, artist = ?,
+                               group_id = ?, status = ?, year = ?, rating = ?, synopsis = ?
+            WHERE id = ?
+        """, (f["title"], title_original, author_id_val, artist, f["group_id"],
+              f["status"], f["year"], f["rating"], f["synopsis"], manga_id))
+
+        conn.execute("DELETE FROM manga_tags WHERE manga_id = ?", (manga_id,))
+        for name in f["tag_names"]:
+            tag_id = get_or_create_tag(conn, name)
+            conn.execute(
+                "INSERT INTO manga_tags (manga_id, tag_id) VALUES (?, ?)",
+                (manga_id, tag_id),
+            )
+
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def get_manga_pages_with_paths(manga_id):

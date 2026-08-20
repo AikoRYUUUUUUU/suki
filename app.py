@@ -349,6 +349,49 @@ def create_manga():
     return redirect(url_for("admin"))
 
 
+@app.route("/admin/mangas/<manga_id>/edit", methods=["GET"])
+@login_required
+def edit_manga_form(manga_id):
+    manga = mangadb.get_manga_edit_data(manga_id)
+    if manga is None:
+        abort(404)
+    return render_template(
+        "admin_edit_manga.html", manga=manga, groups=mangadb.get_groups(),
+        statuses=mangadb.MANGA_STATUSES, tag_groups=mangadb.TAG_GROUPS,
+        sensitive_tags=mangadb.SENSITIVE_TAGS, error=None,
+    )
+
+
+@app.route("/admin/mangas/<manga_id>/edit", methods=["POST"])
+@login_required
+def update_manga(manga_id):
+    manga = mangadb.get_manga_edit_data(manga_id)
+    if manga is None:
+        abort(404)
+    try:
+        mangadb.update_manga(
+            manga_id,
+            title=request.form.get("title"),
+            synopsis=request.form.get("synopsis"),
+            status=request.form.get("status"),
+            tags=",".join(request.form.getlist("tags")),
+            author=request.form.get("author"),
+            group_id=request.form.get("group_id"),
+            title_original=request.form.get("title_original"),
+            artist=request.form.get("artist"),
+            year=request.form.get("year"),
+            rating=request.form.get("rating"),
+        )
+    except mangadb.ValidationError as e:
+        return render_template(
+            "admin_edit_manga.html", manga=manga, groups=mangadb.get_groups(),
+            statuses=mangadb.MANGA_STATUSES, tag_groups=mangadb.TAG_GROUPS,
+            sensitive_tags=mangadb.SENSITIVE_TAGS, error=str(e),
+        ), 400
+
+    return redirect(url_for("admin"))
+
+
 @app.route("/admin/mangas/<manga_id>/cover", methods=["GET"])
 @login_required
 def edit_cover_form(manga_id):

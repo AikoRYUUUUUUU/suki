@@ -259,6 +259,59 @@ form.admin-form > label:first-of-type { margin-top: 0; }
 .manga-list-row .info .meta { font-size: 12.5px; color: var(--gray); }
 .manga-list-row .actions { display: flex; gap: 10px; flex-shrink: 0; }
 
+.manga-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 22px;
+  padding: 4px 0 24px;
+}
+.manga-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--ink-soft);
+  overflow: hidden;
+}
+.manga-card-cover {
+  aspect-ratio: 3/4.3;
+  background: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.manga-card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.manga-card-cover .confirm-cover-empty { height: 100%; }
+.manga-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  flex: 1;
+}
+.manga-card-body h3 {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.3;
+}
+.manga-card-body .meta { font-size: 12px; color: var(--gray); margin: 0; }
+.manga-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+.manga-card-actions .btn {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
 .empty-state {
   color: var(--gray);
   padding: 32px 4px;

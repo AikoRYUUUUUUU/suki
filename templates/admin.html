@@ -34,27 +34,33 @@
     </div>
   </div>
 
-  <div class="admin-card" style="padding:0 28px;">
-    {% if mangas %}
-      <div class="manga-list">
-        {% for m in mangas %}
-          <div class="manga-list-row">
-            <div class="info">
-              <h3>{{ m.title }}</h3>
-              <form class="status-inline" action="{{ url_for('update_status', manga_id=m.id) }}" method="post">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <select name="status" onchange="this.form.requestSubmit()">
-                  {% for s in statuses %}
-                    <option value="{{ s }}" {{ "selected" if s == m.status else "" }}>{{ s }}</option>
-                  {% endfor %}
-                </select>
-              </form>
-              <p class="meta">{{ m.chapter_count }} capítulo{{ 's' if m.chapter_count != 1 else '' }}</p>
-            </div>
-            <div class="actions">
-              <a class="btn btn-ghost" href="{{ url_for('edit_cover_form', manga_id=m.id) }}">Alterar capa</a>
+  {% if mangas %}
+    <div class="manga-grid">
+      {% for m in mangas %}
+        <div class="manga-card">
+          <div class="manga-card-cover">
+            {% if m.cover %}
+              <img src="{{ m.cover }}" alt="Capa de {{ m.title }}">
+            {% else %}
+              <div class="confirm-cover-empty">Sem capa</div>
+            {% endif %}
+          </div>
+          <div class="manga-card-body">
+            <h3>{{ m.title }}</h3>
+            <form class="status-inline" action="{{ url_for('update_status', manga_id=m.id) }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="status" onchange="this.form.requestSubmit()">
+                {% for s in statuses %}
+                  <option value="{{ s }}" {{ "selected" if s == m.status else "" }}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </form>
+            <p class="meta">{{ m.chapter_count }} capítulo{{ 's' if m.chapter_count != 1 else '' }}</p>
+            <div class="manga-card-actions">
+              <a class="btn btn-primary" href="{{ url_for('edit_manga_form', manga_id=m.id) }}">Editar</a>
+              <a class="btn btn-ghost" href="{{ url_for('edit_cover_form', manga_id=m.id) }}">Capa</a>
               <a class="btn btn-ghost" href="{{ url_for('chapters_list', manga_id=m.id) }}">Capítulos</a>
-              <a class="btn btn-ghost" href="{{ url_for('new_chapter_form', manga_id=m.id) }}">Adicionar capítulo</a>
+              <a class="btn btn-ghost" href="{{ url_for('new_chapter_form', manga_id=m.id) }}">+ Capítulo</a>
               <button type="button" class="btn btn-danger js-delete-trigger"
                       data-target-form="delete-manga-{{ m.id }}"
                       data-name="{{ m.title }}"
@@ -64,12 +70,14 @@
               </form>
             </div>
           </div>
-        {% endfor %}
-      </div>
-    {% else %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="admin-card">
       <p class="empty-state">Nenhum mangá cadastrado ainda. Comece adicionando um.</p>
-    {% endif %}
-  </div>
+    </div>
+  {% endif %}
 </div>
 
 <dialog id="confirm-delete-dialog" class="confirm-dialog">

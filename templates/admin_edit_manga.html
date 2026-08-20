@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Editar mangá — Suki</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='assets/logo.svg') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a href="/" class="brand"><img class="stamp" src="{{ url_for('static', filename='assets/logo.svg') }}" alt=""><img class="wordmark" src="{{ url_for('static', filename='assets/wordmark.svg') }}" alt="Suki"></a>
+    <nav class="nav-links">
+      <a href="{{ url_for('admin') }}">← Painel</a>
+    </nav>
+  </div>
+</header>
+
+{% set sel_status = request.form.get('status', manga.status) %}
+{% set sel_tags = request.form.getlist('tags') or manga.tag_names %}
+{% set sel_group = request.form.get('group_id', manga.group_id|string if manga.group_id is not none else '') %}
+
+<div class="admin-shell">
+  <div class="admin-header">
+    <div>
+      <p class="eyebrow">Editando</p>
+      <h1>{{ manga.title }}</h1>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    {% if error %}
+      <p class="admin-error">{{ error }}</p>
+    {% endif %}
+
+    <div class="confirm-preview" style="margin-bottom:24px; align-items:center;">
+      <div class="confirm-cover">
+        {% if manga.cover %}
+          <img src="{{ manga.cover }}" alt="Capa de {{ manga.title }}">
+        {% else %}
+          <div class="confirm-cover-empty">Sem capa</div>
+        {% endif %}
+      </div>
+      <div class="confirm-fields">
+        <a class="btn btn-ghost" href="{{ url_for('edit_cover_form', manga_id=manga.id) }}">Alterar capa</a>
+      </div>
+    </div>
+
+    <form class="admin-form" action="{{ url_for('update_manga', manga_id=manga.id) }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label for="title">Título</label>
+      <input type="text" id="title" name="title" value="{{ request.form.get('title', manga.title) }}" required>
+
+      <label for="title_original">Título original</label>
+      <input type="text" id="title_original" name="title_original" value="{{ request.form.get('title_original', manga.title_original or '') }}">
+
+      <label for="synopsis">Sinopse</label>
+      <textarea id="synopsis" name="synopsis" required>{{ request.form.get('synopsis', manga.synopsis) }}</textarea>
+
+      <label for="status">Status</label>
+      <select id="status" name="status" required>
+        <option value="">Selecione…</option>
+        {% for s in statuses %}
+          <option value="{{ s }}" {{ "selected" if s == sel_status else "" }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="year">Ano</label>
+      <input type="text" id="year" name="year" inputmode="numeric" value="{{ request.form.get('year', manga.year if manga.year is not none else '') }}">
+
+      <label for="rating">Avaliação (0 a 5)</label>
+      <input type="text" id="rating" name="rating" inputmode="decimal" value="{{ request.form.get('rating', manga.rating if manga.rating is not none else '') }}">
+
+      <label for="artist">Artista</label>
+      <input type="text" id="artist" name="artist" value="{{ request.form.get('artist', manga.artist or '') }}">
+
+      <label>Tags</label>
+      <div class="tag-picker">
+        {% for group_name, group_tags in tag_groups.items() %}
+          <div class="tag-group {{ 'tag-group-sensitive' if group_name == 'Conteúdo sensível' else '' }}">
+            <p class="tag-group-title">
+              {% if group_name == 'Conteúdo sensível' %}<span class="tag-warning-icon">⚠</span>{% endif %}
+              {{ group_name }}
+            </p>
+            {% if group_name == 'Conteúdo sensível' %}
+              <p class="admin-hint">Marque só se o mangá realmente tiver conteúdo adulto/explícito — afeta como o título é sinalizado no catálogo.</p>
+            {% endif %}
+            <div class="tag-options">
+              {% for t in group_tags %}
+                <label class="tag-chip {{ 'tag-chip-sensitive' if t in sensitive_tags else '' }}">
+                  <input type="checkbox" name="tags" value="{{ t }}" {{ "checked" if t in sel_tags else "" }}>
+                  {{ t }}
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <label for="author">Autor</label>
+      <input type="text" id="author" name="author" placeholder="Nome do autor" value="{{ request.form.get('author', manga.author_name or '') }}">
+      <p class="admin-hint">Autor novo é criado automaticamente.</p>
+
+      <label for="group">Grupo</label>
+      <select id="group" name="group_id">
+        <option value="" {{ "selected" if sel_group == '' else "" }}>—</option>
+        {% for group in groups %}
+          <option value="{{ group['id'] }}" {{ "selected" if (group['id']|string) == sel_group else "" }}>{{ group['name'] }}</option>
+        {% endfor %}
+      </select>
+
+      <div class="admin-actions">
+        <button type="submit" class="btn btn-primary">Salvar alterações</button>
+        <a class="btn btn-ghost" href="{{ url_for('admin') }}">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>
