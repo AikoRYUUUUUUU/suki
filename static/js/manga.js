@@ -135,6 +135,20 @@ const CUSDIS_THEME_CSS = `
   }
   button:hover { background: #a03d24 !important; }
   a { color: #C99A3E !important; }
+
+  /* cada comentário (nickname + data + texto + responder) numa box própria -
+     .my-4 é a classe Tailwind que envolve cada item; o :has() restringe pra
+     só os que têm a linha de nickname dentro, pra não pegar outros divs
+     genéricos que por acaso também usem essa classe de espaçamento */
+  .my-4:has(> .flex.items-center) {
+    background: #221F2C !important;
+    border: 1px solid rgba(238, 230, 211, .12) !important;
+    border-radius: 2px !important;
+    padding: 14px 16px !important;
+    margin: 0 0 12px !important;
+  }
+  div.mr-2.font-medium { color: #C99A3E !important; }
+  div.text-gray-500.text-sm { color: #8A8578 !important; }
 `;
 
 function mountComments(manga) {
