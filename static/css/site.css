@@ -188,6 +188,33 @@ img { max-width: 100%; display: block; }
 .shelf {
   padding: 64px 0;
 }
+.search-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.search-bar input[type="text"],
+.search-bar select {
+  padding: 12px 14px;
+  background: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.search-bar input[type="text"] { flex: 1; min-width: 240px; }
+.search-bar input:focus,
+.search-bar select:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+.empty-state {
+  color: var(--gray);
+  padding: 32px 4px;
+  text-align: center;
+}
 .grid-covers {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));

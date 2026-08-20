@@ -40,7 +40,15 @@
           <div class="manga-list-row">
             <div class="info">
               <h3>{{ m.title }}</h3>
-              <p class="meta">{{ m.status }} · {{ m.chapter_count }} capítulo{{ 's' if m.chapter_count != 1 else '' }}</p>
+              <form class="status-inline" action="{{ url_for('update_status', manga_id=m.id) }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <select name="status" onchange="this.form.requestSubmit()">
+                  {% for s in statuses %}
+                    <option value="{{ s }}" {{ "selected" if s == m.status else "" }}>{{ s }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+              <p class="meta">{{ m.chapter_count }} capítulo{{ 's' if m.chapter_count != 1 else '' }}</p>
             </div>
             <div class="actions">
               <a class="btn btn-ghost" href="{{ url_for('edit_cover_form', manga_id=m.id) }}">Alterar capa</a>

@@ -44,7 +44,12 @@
       <textarea id="synopsis" name="synopsis" required></textarea>
 
       <label for="status">Status</label>
-      <input type="text" id="status" name="status" placeholder="Em andamento, Completo..." required>
+      <select id="status" name="status" required>
+        <option value="">Selecione…</option>
+        {% for s in statuses %}
+          <option value="{{ s }}" {{ "selected" if s == request.form.get("status") else "" }}>{{ s }}</option>
+        {% endfor %}
+      </select>
 
       <label for="year">Ano</label>
       <input type="text" id="year" name="year" inputmode="numeric">

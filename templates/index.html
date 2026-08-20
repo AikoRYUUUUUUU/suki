@@ -39,7 +39,19 @@
   <div class="wrap">
     <p class="eyebrow">Biblioteca</p>
     <h2 class="section-title">Todos os títulos</h2>
+
+    <form class="search-bar" onsubmit="return false;">
+      <input type="text" id="search-input" placeholder="Buscar por nome, autor, grupo, tag ou gênero…">
+      <select id="search-status">
+        <option value="">Todos os status</option>
+        {% for s in statuses %}
+          <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
     <div class="grid-covers" id="grid-covers"></div>
+    <p class="empty-state" id="search-empty" hidden>Nenhum mangá encontrado para essa busca.</p>
   </div>
 </section>
 

@@ -206,6 +206,21 @@ form.admin-form label:first-of-type { margin-top: 0; }
   pointer-events: none;
 }
 
+.status-inline { margin: 4px 0; }
+.status-inline select {
+  padding: 5px 8px;
+  background: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+}
+.status-inline select:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
 .manga-list { border-top: 1px solid var(--line); }
 .manga-list-row {
   display: flex;

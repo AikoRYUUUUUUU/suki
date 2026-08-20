@@ -7,6 +7,8 @@ from datetime import date
 DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "mangadb.db"))
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
 
+MANGA_STATUSES = ["Em Hiatus", "Em andamento", "Finalizado"]
+
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
@@ -223,6 +225,8 @@ def validate_manga_fields(title, synopsis, status, tags, author, group_id, year=
         raise ValidationError("Descrição é obrigatória.")
     if not status:
         raise ValidationError("Status é obrigatório.")
+    if status not in MANGA_STATUSES:
+        raise ValidationError("Status inválido.")
 
     year_val = None
     if year not in (None, ""):
@@ -309,6 +313,13 @@ def get_manga_cover(manga_id):
 def update_manga_cover(manga_id, cover_path):
     conn = get_connection()
     conn.execute("UPDATE mangas SET cover = ? WHERE id = ?", (cover_path, manga_id))
+    conn.commit()
+    conn.close()
+
+
+def update_manga_status(manga_id, status):
+    conn = get_connection()
+    conn.execute("UPDATE mangas SET status = ? WHERE id = ?", (status, manga_id))
     conn.commit()
     conn.close()
 

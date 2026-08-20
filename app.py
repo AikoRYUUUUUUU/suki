@@ -137,7 +137,7 @@ def login_required(view):
 @app.route("/")
 @app.route("/index.html")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", statuses=mangadb.MANGA_STATUSES)
 
 
 @app.route("/manga.html")
@@ -227,18 +227,38 @@ def logout():
 @app.route("/admin", methods=["GET"])
 @login_required
 def admin():
-    return render_template("admin.html", mangas=mangadb.get_dashboard_mangas())
+    return render_template(
+        "admin.html",
+        mangas=mangadb.get_dashboard_mangas(),
+        statuses=mangadb.MANGA_STATUSES,
+    )
+
+
+@app.route("/admin/mangas/<manga_id>/status", methods=["POST"])
+@login_required
+def update_status(manga_id):
+    if not mangadb.manga_exists(manga_id):
+        abort(404)
+    status = request.form.get("status")
+    if status not in mangadb.MANGA_STATUSES:
+        abort(400)
+    mangadb.update_manga_status(manga_id, status)
+    return redirect(url_for("admin"))
 
 
 @app.route("/admin/mangas/new", methods=["GET"])
 @login_required
 def new_manga_form():
-    return render_template("admin_new_manga.html", groups=mangadb.get_groups(), error=None)
+    return render_template(
+        "admin_new_manga.html", groups=mangadb.get_groups(),
+        statuses=mangadb.MANGA_STATUSES, error=None,
+    )
 
 
 def render_new_manga_error(message):
     return render_template(
-        "admin_new_manga.html", groups=mangadb.get_groups(), error=message,
+        "admin_new_manga.html", groups=mangadb.get_groups(),
+        statuses=mangadb.MANGA_STATUSES, error=message,
     ), 400
 
 
