@@ -48,7 +48,7 @@ CSP = (
     "script-src 'self' https://cusdis.com; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com; "
-    "connect-src 'self' https://cusdis.com https://graphql.anilist.co; "
+    "connect-src 'self' https://cusdis.com https://graphql.anilist.co https://*.r2.cloudflarestorage.com; "
     "frame-ancestors 'self'; "
     "base-uri 'self'; "
     "form-action 'self'; "
