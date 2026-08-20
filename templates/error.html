@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ code }} — Suki</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='assets/logo.svg') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a href="/" class="brand"><img class="stamp" src="{{ url_for('static', filename='assets/logo.svg') }}" alt=""><img class="wordmark" src="{{ url_for('static', filename='assets/wordmark.svg') }}" alt="Suki"></a>
+  </div>
+</header>
+
+<section class="error-page">
+  <div class="wrap">
+    <p class="error-code">{{ code }}</p>
+    <h1>{{ message }}</h1>
+    <a class="btn btn-primary" href="/">Voltar para o início</a>
+  </div>
+</section>
+
+</body>
+</html>

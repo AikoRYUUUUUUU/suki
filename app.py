@@ -915,5 +915,16 @@ def delete_chapter_route(manga_id, chapter_id):
     return redirect(url_for("chapters_list", manga_id=manga_id))
 
 
+@app.errorhandler(404)
+def not_found(e):
+    return render_template("error.html", code=404, message="Página não encontrada."), 404
+
+
+@app.errorhandler(500)
+def server_error(e):
+    app.logger.exception("Erro interno não tratado")
+    return render_template("error.html", code=500, message="Algo deu errado do nosso lado. Já estamos cientes."), 500
+
+
 if __name__ == "__main__":
     app.run(debug=os.environ.get("FLASK_DEBUG") == "1")
