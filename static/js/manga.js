@@ -29,9 +29,14 @@ async function renderMangaPage() {
   mountComments(manga);
 
   const sorted = [...manga.chapters].sort((a, b) => a.number - b.number);
-  const firstChapter = sorted[0];
   const startBtn = document.getElementById("start-reading");
-  startBtn.href = `reader.html?id=${manga.id}&ch=${firstChapter.id}`;
+  if (sorted.length > 0) {
+    startBtn.href = `reader.html?id=${manga.id}&ch=${sorted[0].id}`;
+  } else {
+    startBtn.removeAttribute("href");
+    startBtn.classList.add("btn-disabled");
+    startBtn.textContent = "Nenhum capítulo ainda";
+  }
 
   document.getElementById("chapter-list").innerHTML = sorted
     .slice()

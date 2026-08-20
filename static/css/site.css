@@ -265,6 +265,12 @@ img { max-width: 100%; display: block; }
 }
 .btn-primary { background: var(--vermillion); color: var(--paper); }
 .btn-primary:hover { background: #a03d24; }
+.btn-disabled {
+  background: var(--ink-soft);
+  color: var(--gray);
+  pointer-events: none;
+  cursor: default;
+}
 .btn-ghost {
   background: transparent;
   border-color: var(--line);
