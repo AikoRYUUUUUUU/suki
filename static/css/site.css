@@ -718,12 +718,10 @@ body.reader-body {
 }
 .reader-stage img {
   width: 100%;
-  border-radius: 2px;
-  margin-bottom: 14px;
+  display: block;
+  margin-bottom: 0;
   background: var(--ink-soft);
 }
-.reader-stage.paginated img { margin-bottom: 0; }
-.reader-stage.webtoon img { margin-bottom: 0; border-radius: 0; display: block; }
 
 .reader-tapzones {
   position: fixed;

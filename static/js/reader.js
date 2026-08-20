@@ -59,7 +59,6 @@ function startReader(manga, chapter) {
   document.getElementById("page-title").textContent = `${manga.title} — Cap. ${chapter.number} — Suki`;
   document.getElementById("rt-manga").textContent = manga.title;
   document.getElementById("rt-chapter").textContent = `Cap. ${chapter.number} — ${chapter.title}`;
-  document.getElementById("reader-stage").classList.toggle("webtoon", (manga.genres || []).includes("Webtoon"));
 
   renderPages();
   updateCounter();
