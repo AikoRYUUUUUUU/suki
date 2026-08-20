@@ -713,14 +713,12 @@ def add_vote(manga_id, voter_hash, value):
             (value, manga_id),
         )
         conn.commit()
+        row = conn.execute(
+            "SELECT rating, rating_sum, rating_count FROM mangas WHERE id = ?", (manga_id,)
+        ).fetchone()
     finally:
         conn.close()
 
-    conn = get_connection()
-    row = conn.execute(
-        "SELECT rating, rating_sum, rating_count FROM mangas WHERE id = ?", (manga_id,)
-    ).fetchone()
-    conn.close()
     return effective_rating(row), row["rating_count"]
 
 
