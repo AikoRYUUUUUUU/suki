@@ -62,6 +62,8 @@ function startReader(manga, chapter) {
 
   renderPages();
   updateCounter();
+  populateChapterSelects();
+  updateChapterNavState();
   bindControls();
   bindKeyboard();
 
@@ -111,10 +113,33 @@ function goAdjacentChapter(direction, landOnLastPage) {
   const { prev, next } = getAdjacentChapters(state.manga, state.chapter.id);
   const target = direction < 0 ? prev : next;
   if (!target) return; // já é o primeiro/último capítulo
+  goToChapterId(target.id, landOnLastPage);
+}
+
+function goToChapterId(chapterId, landOnLastPage) {
+  if (!chapterId || chapterId === state.chapter.id) return;
   const url = new URL(window.location.href);
-  url.searchParams.set("ch", target.id);
+  url.searchParams.set("ch", chapterId);
   if (landOnLastPage) url.searchParams.set("p", "last");
+  else url.searchParams.delete("p");
   window.location.href = url.toString();
+}
+
+// --- seletor de capítulos (topo + rodapé) ---
+function populateChapterSelects() {
+  const sorted = [...state.manga.chapters].sort((a, b) => a.number - b.number);
+  const optionsHTML = sorted
+    .map(c => `<option value="${c.id}"${c.id === state.chapter.id ? " selected" : ""}>Cap. ${c.number} — ${c.title}</option>`)
+    .join("");
+  document.querySelectorAll(".chapter-select").forEach(sel => {
+    sel.innerHTML = optionsHTML;
+  });
+}
+
+function updateChapterNavState() {
+  const { prev, next } = getAdjacentChapters(state.manga, state.chapter.id);
+  document.querySelectorAll(".chapter-prev-btn").forEach(btn => { btn.disabled = !prev; });
+  document.querySelectorAll(".chapter-next-btn").forEach(btn => { btn.disabled = !next; });
 }
 
 // --- scroll contínuo: observa qual página está visível para atualizar contador ---
@@ -141,8 +166,12 @@ function bindControls() {
   document.getElementById("zone-prev").addEventListener("click", () => goToPage(-1));
   document.getElementById("zone-next").addEventListener("click", () => goToPage(1));
 
-  document.getElementById("prev-ch").addEventListener("click", () => goAdjacentChapter(-1, false));
-  document.getElementById("next-ch").addEventListener("click", () => goAdjacentChapter(1, false));
+  document.querySelectorAll(".chapter-prev-btn").forEach(btn =>
+    btn.addEventListener("click", () => goAdjacentChapter(-1, false)));
+  document.querySelectorAll(".chapter-next-btn").forEach(btn =>
+    btn.addEventListener("click", () => goAdjacentChapter(1, false)));
+  document.querySelectorAll(".chapter-select").forEach(sel =>
+    sel.addEventListener("change", (e) => goToChapterId(e.target.value, false)));
 }
 
 function bindKeyboard() {

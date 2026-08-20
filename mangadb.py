@@ -19,7 +19,7 @@ TAG_GROUPS = {
     ],
     "Demografia": ["Shounen", "Shoujo", "Seinen", "Josei"],
     "Relacionamento": ["Yaoi", "Yuri", "Harém"],
-    "Conteúdo sensível": ["Ecchi", "Smut", "Hentai", "Adulto (18+)", "Mature"],
+    "Conteúdo sensível": ["Ecchi", "Smut", "Adulto (18+)", "Mature"],
 }
 FIXED_TAGS = [tag for tags in TAG_GROUPS.values() for tag in tags]
 SENSITIVE_TAGS = set(TAG_GROUPS["Conteúdo sensível"])
@@ -40,6 +40,7 @@ def init_db():
     conn.executescript(schema)
     _migrate_pages_size_bytes(conn)
     _migrate_mangas_rating_votes(conn)
+    _migrate_remove_hentai_tag(conn)
     conn.commit()
     conn.close()
 
@@ -62,6 +63,14 @@ def _migrate_mangas_rating_votes(conn):
         conn.execute("ALTER TABLE mangas ADD COLUMN rating_sum REAL NOT NULL DEFAULT 0")
     if "rating_count" not in columns:
         conn.execute("ALTER TABLE mangas ADD COLUMN rating_count INTEGER NOT NULL DEFAULT 0")
+
+
+def _migrate_remove_hentai_tag(conn):
+    """A tag "Hentai" foi retirada do site (não faz mais parte de TAG_GROUPS) -
+    remove qualquer linha remanescente de um banco de produção onde ela já
+    tenha sido criada/associada. `ON DELETE CASCADE` em manga_tags.tag_id
+    limpa as associações junto."""
+    conn.execute("DELETE FROM tags WHERE lower(name) = 'hentai'")
 
 
 def slugify(text):

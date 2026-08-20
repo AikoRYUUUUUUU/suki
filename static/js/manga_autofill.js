@@ -37,7 +37,6 @@
     "thriller": "Suspense",
     "mecha": "Mecha",
     "ecchi": "Ecchi",
-    "hentai": "Hentai",
     "sci-fi": "Ficção Científica",
     "isekai": "Isekai",
     "school": "Escolar",

@@ -39,7 +39,7 @@ function qs(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
-const ADULT_TAGS = new Set(["Adulto (18+)", "Hentai", "Smut", "Mature"]);
+const ADULT_TAGS = new Set(["Adulto (18+)", "Smut", "Mature"]);
 
 function isAdultManga(m) {
   return (m.genres || []).some(g => ADULT_TAGS.has(g));

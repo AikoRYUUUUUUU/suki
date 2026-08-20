@@ -16,9 +16,10 @@
       <strong id="rt-manga">…</strong> · <span id="rt-chapter">…</span>
     </div>
     <div class="reader-controls">
-      <button class="icon-btn" id="prev-ch" title="Capítulo anterior">«</button>
+      <button class="icon-btn chapter-prev-btn" title="Capítulo anterior">«</button>
+      <select class="chapter-select" title="Selecionar capítulo"></select>
+      <button class="icon-btn chapter-next-btn" title="Próximo capítulo">»</button>
       <span class="page-counter" id="page-counter">–/–</span>
-      <button class="icon-btn" id="next-ch" title="Próximo capítulo">»</button>
       <button class="icon-btn" id="mode-toggle" title="Alternar modo de leitura">⇅</button>
     </div>
   </div>
@@ -33,6 +34,16 @@
   <button id="zone-prev" aria-label="Página anterior"></button>
   <button id="zone-next" aria-label="Próxima página"></button>
 </div>
+
+<footer class="reader-bar reader-bar-bottom">
+  <div class="wrap">
+    <div class="reader-controls reader-controls-bottom">
+      <button class="icon-btn chapter-prev-btn" title="Capítulo anterior">«</button>
+      <select class="chapter-select" title="Selecionar capítulo"></select>
+      <button class="icon-btn chapter-next-btn" title="Próximo capítulo">»</button>
+    </div>
+  </div>
+</footer>
 
 <script src="{{ url_for('static', filename='js/data.js') }}"></script>
 <script src="{{ url_for('static', filename='js/reader.js') }}"></script>

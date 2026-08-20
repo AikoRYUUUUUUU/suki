@@ -685,6 +685,31 @@ body.reader-body {
   font-size: 15px;
 }
 .icon-btn:hover { border-color: var(--gray); }
+.icon-btn:disabled {
+  opacity: .35;
+  cursor: default;
+  pointer-events: none;
+}
+.chapter-select {
+  max-width: 220px;
+  background: var(--ink-soft);
+  border: 1px solid var(--line);
+  color: var(--paper);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.chapter-select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.reader-bar-bottom {
+  position: static;
+  border-bottom: none;
+  border-top: 1px solid var(--line);
+}
+.reader-controls-bottom { justify-content: center; width: 100%; }
+.reader-bar-bottom .wrap { justify-content: center; }
 
 .reader-stage {
   max-width: 760px;
