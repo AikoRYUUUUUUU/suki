@@ -297,7 +297,7 @@ img { max-width: 100%; display: block; }
   position: absolute;
   top: 10px;
   left: 10px;
-  background: var(--vermillion-soft);
+  background: rgba(183, 71, 42, .82);
   border: 1px solid var(--vermillion);
   color: var(--paper);
   font-size: 10px;
