@@ -34,6 +34,20 @@
     </div>
   </div>
 
+  {% if migration_pending_count %}
+    <div class="admin-card migration-card">
+      <div class="migration-header">
+        <div>
+          <p class="eyebrow">Armazenamento</p>
+          <h2>Migração pra R2</h2>
+          <p class="admin-hint">{{ migration_pending_count }} imagem{{ 's' if migration_pending_count != 1 else '' }} ainda em disco local (de antes da migração). Migrar libera espaço na cota do PythonAnywhere.</p>
+        </div>
+        <button type="button" id="migrate-btn" class="btn btn-primary">Migrar imagens locais</button>
+      </div>
+      <div id="migration-log" class="migration-log"></div>
+    </div>
+  {% endif %}
+
   {% if mangas %}
     <div class="manga-grid">
       {% for m in mangas %}
@@ -93,5 +107,6 @@
 
 <script src="{{ url_for('static', filename='js/admin_uploads.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin_confirm_delete.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin_migration.js') }}"></script>
 </body>
 </html>

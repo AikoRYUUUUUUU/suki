@@ -620,3 +620,44 @@ def insert_page(chapter_id, position, image_path, size_bytes=None):
     )
     conn.commit()
     conn.close()
+
+
+# ---------- migração de imagens locais legadas pro R2 ----------
+
+def get_migration_candidates():
+    """Capas e páginas cujo caminho ainda é local (não começa com http/https) -
+    tudo que foi enviado antes da migração pro R2 e ainda não foi movido."""
+    conn = get_connection()
+    covers = [dict(r) for r in conn.execute("""
+        SELECT id AS manga_id, title, cover AS path FROM mangas
+        WHERE cover IS NOT NULL AND cover NOT LIKE 'http%'
+    """)]
+    pages = [dict(r) for r in conn.execute("""
+        SELECT p.id AS page_id, c.manga_id AS manga_id, p.image_path AS path
+        FROM pages p JOIN chapters c ON c.id = p.chapter_id
+        WHERE p.image_path NOT LIKE 'http%'
+        ORDER BY c.manga_id, p.chapter_id, p.position
+    """)]
+    conn.close()
+    return {"covers": covers, "pages": pages}
+
+
+def get_page_by_id(page_id):
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT p.id, p.image_path, c.manga_id FROM pages p "
+        "JOIN chapters c ON c.id = p.chapter_id WHERE p.id = ?",
+        (page_id,),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def update_page_image(page_id, image_path, size_bytes):
+    conn = get_connection()
+    conn.execute(
+        "UPDATE pages SET image_path = ?, size_bytes = ? WHERE id = ?",
+        (image_path, size_bytes, page_id),
+    )
+    conn.commit()
+    conn.close()

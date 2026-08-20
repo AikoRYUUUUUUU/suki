@@ -160,10 +160,13 @@ def logout():
 @app.route("/admin", methods=["GET"])
 @login_required
 def admin():
+    candidates = mangadb.get_migration_candidates()
+    migration_pending_count = len(candidates["covers"]) + len(candidates["pages"])
     return render_template(
         "admin.html",
         mangas=mangadb.get_dashboard_mangas(),
         statuses=mangadb.MANGA_STATUSES,
+        migration_pending_count=migration_pending_count,
     )
 
 
@@ -277,6 +280,76 @@ def chapter_r2_delete_urls(manga_id, chapter_id):
         except r2.R2NotConfigured:
             continue
     return jsonify({"urls": result})
+
+
+@app.route("/admin/migration/pending", methods=["GET"])
+@login_required
+def migration_pending():
+    """Capas/páginas ainda em disco local (upload de antes da migração pro R2).
+    O navegador do admin busca cada arquivo via sua própria URL /static/ (mesma
+    origem, não é 'saída' pro PythonAnywhere) e reenvia pro R2 usando o mesmo
+    presign de sempre - ver static/js/admin_migration.js."""
+    candidates = mangadb.get_migration_candidates()
+    items = [
+        {
+            "kind": "cover", "manga_id": c["manga_id"], "label": c["title"],
+            "local_url": mangadb.static_url(c["path"]),
+        }
+        for c in candidates["covers"]
+    ] + [
+        {
+            "kind": "page", "page_id": p["page_id"], "manga_id": p["manga_id"], "label": f"página #{p['page_id']}",
+            "local_url": mangadb.static_url(p["path"]),
+        }
+        for p in candidates["pages"]
+    ]
+    return jsonify({"items": items})
+
+
+@app.route("/admin/migration/commit", methods=["POST"])
+@login_required
+def migration_commit():
+    """Grava a URL R2 já enviada pelo navegador no lugar do caminho local
+    correspondente, e só então apaga o arquivo local antigo (nessa ordem - nunca
+    apaga antes de confirmar que a nova URL é válida e foi persistida)."""
+    data = request.get_json(silent=True) or {}
+    kind = data.get("kind")
+    url = data.get("url")
+    if not is_r2_url(url) or r2.key_from_public_url(url) is None:
+        abort(400)
+    size = data.get("size")
+    size_bytes = int(size) if isinstance(size, (int, float)) else None
+
+    if kind == "cover":
+        manga_id = data.get("manga_id")
+        if not manga_id or not mangadb.manga_exists(manga_id):
+            abort(404)
+        old_path = mangadb.get_manga_cover(manga_id)
+        if is_r2_url(old_path):
+            return jsonify({"ok": True, "already_migrated": True})
+        mangadb.update_manga_cover(manga_id, url)
+        if old_path:
+            old_full_path = os.path.join(app.root_path, "static", *old_path.split("/"))
+            if os.path.exists(old_full_path):
+                os.remove(old_full_path)
+        return jsonify({"ok": True})
+
+    if kind == "page":
+        page_id = data.get("page_id")
+        page = mangadb.get_page_by_id(page_id)
+        if page is None or page["manga_id"] != data.get("manga_id"):
+            abort(404)
+        old_path = page["image_path"]
+        if is_r2_url(old_path):
+            return jsonify({"ok": True, "already_migrated": True})
+        mangadb.update_page_image(page_id, url, size_bytes)
+        if mangadb.count_pages_with_image_path(old_path, exclude_ids=[page_id]) == 0:
+            old_full_path = os.path.join(app.root_path, "static", *old_path.split("/"))
+            if os.path.exists(old_full_path):
+                os.remove(old_full_path)
+        return jsonify({"ok": True})
+
+    abort(400)
 
 
 @app.route("/admin/mangas/<manga_id>/status", methods=["POST"])
