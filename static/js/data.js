@@ -38,3 +38,16 @@ function getAdjacentChapters(manga, chapterId) {
 function qs(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
+
+function mangaCardHTML(m) {
+  return `
+    <a class="card-manga" href="manga.html?id=${m.id}">
+      <div class="cover-frame">
+        <img src="${m.cover}" alt="Capa de ${m.title}" loading="lazy">
+        <span class="badge-status">${m.status}</span>
+      </div>
+      <h3>${m.title}</h3>
+      <p class="meta">${m.chapters.length} capítulos · ★ ${m.rating}</p>
+    </a>
+  `;
+}

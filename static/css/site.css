@@ -104,12 +104,23 @@ img { max-width: 100%; display: block; }
   border: 1px solid var(--line);
   border-radius: 20px;
 }
+.search-icon-btn {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
 .topbar-search .search-icon {
   width: 14px;
   height: 14px;
   fill: var(--gray);
   flex-shrink: 0;
 }
+.search-icon-btn:hover .search-icon { fill: var(--paper); }
+.search-icon-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .topbar-search input[type="text"] {
   flex: 1;
   min-width: 0;
@@ -184,17 +195,35 @@ img { max-width: 100%; display: block; }
   margin: 0 0 18px;
 }
 .hero-title .accent { color: var(--vermillion); }
+.hero-manga { transition: opacity .35s ease; }
+.hero-manga.is-fading { opacity: 0; }
+.hero-manga-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  color: var(--gold);
+  margin: 0 0 8px;
+}
 .hero-sub {
   color: var(--paper-dim);
   font-size: 17px;
   max-width: 52ch;
-  margin-bottom: 30px;
+  margin-bottom: 16px;
+  min-height: 1.5em;
 }
+.hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 26px;
+}
+.hero-tags .pill { font-size: 11px; padding: 5px 11px; }
 .hero-cover {
   position: relative;
   justify-self: end;
   width: 280px;
+  transition: opacity .35s ease;
 }
+.hero-cover.is-fading { opacity: 0; }
 .hero-cover img {
   width: 100%;
   border-radius: var(--radius);

@@ -140,6 +140,16 @@ def index():
     return render_template("index.html", statuses=mangadb.MANGA_STATUSES)
 
 
+@app.route("/busca.html")
+def search_page():
+    return render_template(
+        "busca.html",
+        statuses=mangadb.MANGA_STATUSES,
+        q=request.args.get("q", "").strip(),
+        status=request.args.get("status", "").strip(),
+    )
+
+
 @app.route("/manga.html")
 def manga_page():
     return render_template("manga.html")
