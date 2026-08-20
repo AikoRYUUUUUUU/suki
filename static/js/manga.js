@@ -104,6 +104,39 @@ function setupRateWidget(manga) {
   });
 }
 
+// Cusdis renderiza o widget num iframe srcdoc (mesma origem da página, não um
+// domínio externo) - por isso dá pra ler/escrever o documento de dentro dele
+// sem esbarrar em bloqueio de cross-origin. Usamos isso pra (1) redimensionar
+// o iframe pro tamanho real do conteúdo, já que ele nasce fixo em 150px de
+// altura (o padrão do navegador pra iframe sem altura definida) e nada no
+// widget deles ajusta isso sozinho, e (2) sobrescrever as classes Tailwind do
+// widget pra combinar com a paleta do site, com !important porque as classes
+// deles (ex. bg-transparent) têm a mesma especificidade que um seletor de
+// elemento puro e venceriam sem isso.
+const CUSDIS_THEME_CSS = `
+  html, body {
+    background: transparent !important;
+    color: #EEE6D3 !important;
+    font-family: 'Zen Kaku Gothic New', 'Inter', sans-serif !important;
+  }
+  label { color: #C9C0AA !important; }
+  input, textarea {
+    background: #17151F !important;
+    border: 1px solid rgba(238, 230, 211, .18) !important;
+    color: #EEE6D3 !important;
+    border-radius: 2px !important;
+  }
+  input::placeholder, textarea::placeholder { color: #8A8578 !important; }
+  button {
+    background: #B7472A !important;
+    color: #EEE6D3 !important;
+    border: none !important;
+    border-radius: 2px !important;
+  }
+  button:hover { background: #a03d24 !important; }
+  a { color: #C99A3E !important; }
+`;
+
 function mountComments(manga) {
   const mount = document.getElementById("comments-mount");
   if (!mount) return;
@@ -124,6 +157,46 @@ function mountComments(manga) {
   script.async = true;
   script.defer = true;
   mount.appendChild(script);
+
+  function applyThemeAndResize(iframe) {
+    let doc;
+    try {
+      doc = iframe.contentDocument;
+    } catch (e) {
+      return false;
+    }
+    if (!doc || !doc.body) return false;
+
+    if (!doc.getElementById("suki-cusdis-theme")) {
+      const style = doc.createElement("style");
+      style.id = "suki-cusdis-theme";
+      style.textContent = CUSDIS_THEME_CSS;
+      doc.head.appendChild(style);
+    }
+
+    const resize = () => { iframe.style.height = doc.documentElement.scrollHeight + "px"; };
+    resize();
+
+    if (!iframe.dataset.sukiObserved) {
+      iframe.dataset.sukiObserved = "1";
+      new MutationObserver(resize).observe(doc.body, { childList: true, subtree: true, characterData: true });
+      new ResizeObserver(resize).observe(doc.body);
+    }
+    return true;
+  }
+
+  // O iframe do Cusdis é criado de forma assíncrona pelo script deles -
+  // tenta por alguns segundos até ele existir e ter conteúdo.
+  let attempts = 0;
+  const timer = setInterval(() => {
+    attempts++;
+    const iframe = thread.querySelector("iframe");
+    if (iframe && applyThemeAndResize(iframe)) {
+      clearInterval(timer);
+    } else if (attempts > 40) {
+      clearInterval(timer);
+    }
+  }, 250);
 }
 
 function formatDate(iso) {
