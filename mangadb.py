@@ -9,6 +9,21 @@ SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
 
 MANGA_STATUSES = ["Em Hiatus", "Em andamento", "Finalizado"]
 
+# Catálogo fixo de tags (substitui a entrada manual no admin). Agrupado pra exibição
+# em seções no admin e no filtro de busca; "Conteúdo sensível" leva aviso na UI.
+TAG_GROUPS = {
+    "Gêneros": [
+        "Ação", "Aventura", "Comédia", "Drama", "Fantasia", "Ficção Científica",
+        "Terror", "Mistério", "Suspense", "Romance", "Slice of Life", "Sobrenatural",
+        "Psicológico", "Esporte", "Histórico", "Mecha", "Isekai", "Escolar",
+    ],
+    "Demografia": ["Shounen", "Shoujo", "Seinen", "Josei"],
+    "Relacionamento": ["Yaoi", "Yuri", "Harém"],
+    "Conteúdo sensível": ["Ecchi", "Smut", "Hentai", "Adulto (18+)", "Mature"],
+}
+FIXED_TAGS = [tag for tags in TAG_GROUPS.values() for tag in tags]
+SENSITIVE_TAGS = set(TAG_GROUPS["Conteúdo sensível"])
+
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
@@ -252,6 +267,8 @@ def validate_manga_fields(title, synopsis, status, tags, author, group_id, year=
         name = raw.strip()
         if not name or name.lower() in seen:
             continue
+        if name not in FIXED_TAGS:
+            raise ValidationError(f"Tag inválida: {name}")
         seen.add(name.lower())
         tag_names.append(name)
 

@@ -64,9 +64,28 @@
       <label for="artist">Artista</label>
       <input type="text" id="artist" name="artist">
 
-      <label for="tags">Tags</label>
-      <input type="text" id="tags" name="tags" placeholder="Ação, Drama, Sobrenatural">
-      <p class="admin-hint">Separe por vírgula. Tags novas são criadas automaticamente.</p>
+      <label>Tags</label>
+      <div class="tag-picker">
+        {% for group_name, group_tags in tag_groups.items() %}
+          <div class="tag-group {{ 'tag-group-sensitive' if group_name == 'Conteúdo sensível' else '' }}">
+            <p class="tag-group-title">
+              {% if group_name == 'Conteúdo sensível' %}<span class="tag-warning-icon">⚠</span>{% endif %}
+              {{ group_name }}
+            </p>
+            {% if group_name == 'Conteúdo sensível' %}
+              <p class="admin-hint">Marque só se o mangá realmente tiver conteúdo adulto/explícito — afeta como o título é sinalizado no catálogo.</p>
+            {% endif %}
+            <div class="tag-options">
+              {% for t in group_tags %}
+                <label class="tag-chip {{ 'tag-chip-sensitive' if t in sensitive_tags else '' }}">
+                  <input type="checkbox" name="tags" value="{{ t }}" {{ "checked" if t in request.form.getlist("tags") else "" }}>
+                  {{ t }}
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
 
       <label for="author">Autor</label>
       <input type="text" id="author" name="author" placeholder="Nome do autor">

@@ -34,7 +34,7 @@
   margin-bottom: 20px;
 }
 
-form.admin-form label {
+form.admin-form > label {
   display: block;
   font-size: 12px;
   letter-spacing: .06em;
@@ -42,7 +42,7 @@ form.admin-form label {
   color: var(--gray);
   margin: 18px 0 6px;
 }
-form.admin-form label:first-of-type { margin-top: 0; }
+form.admin-form > label:first-of-type { margin-top: 0; }
 
 .admin-form input[type="text"],
 .admin-form input[type="number"],
@@ -75,6 +75,25 @@ form.admin-form label:first-of-type { margin-top: 0; }
   border-radius: var(--radius);
   color: var(--paper-dim);
   background: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+.admin-form input[type="file"]::file-selector-button,
+.admin-form input[type="file"]::-webkit-file-upload-button {
+  margin-right: 12px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--ink-soft);
+  color: var(--paper);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.admin-form input[type="file"]::file-selector-button:hover,
+.admin-form input[type="file"]::-webkit-file-upload-button:hover {
+  border-color: var(--gold);
 }
 
 .admin-hint {

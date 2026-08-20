@@ -145,8 +145,11 @@ def search_page():
     return render_template(
         "busca.html",
         statuses=mangadb.MANGA_STATUSES,
+        tag_groups=mangadb.TAG_GROUPS,
+        sensitive_tags=mangadb.SENSITIVE_TAGS,
         q=request.args.get("q", "").strip(),
         status=request.args.get("status", "").strip(),
+        selected_tags=request.args.getlist("tags"),
     )
 
 
@@ -261,14 +264,16 @@ def update_status(manga_id):
 def new_manga_form():
     return render_template(
         "admin_new_manga.html", groups=mangadb.get_groups(),
-        statuses=mangadb.MANGA_STATUSES, error=None,
+        statuses=mangadb.MANGA_STATUSES, tag_groups=mangadb.TAG_GROUPS,
+        sensitive_tags=mangadb.SENSITIVE_TAGS, error=None,
     )
 
 
 def render_new_manga_error(message):
     return render_template(
         "admin_new_manga.html", groups=mangadb.get_groups(),
-        statuses=mangadb.MANGA_STATUSES, error=message,
+        statuses=mangadb.MANGA_STATUSES, tag_groups=mangadb.TAG_GROUPS,
+        sensitive_tags=mangadb.SENSITIVE_TAGS, error=message,
     ), 400
 
 
@@ -282,7 +287,7 @@ def preview_manga():
             title=request.form.get("title"),
             synopsis=request.form.get("synopsis"),
             status=request.form.get("status"),
-            tags=request.form.get("tags"),
+            tags=",".join(request.form.getlist("tags")),
             author=request.form.get("author"),
             group_id=request.form.get("group_id"),
             year=request.form.get("year"),

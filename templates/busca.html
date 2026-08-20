@@ -37,6 +37,32 @@
   <div class="wrap">
     <p class="eyebrow">Busca</p>
     <h2 class="section-title" id="search-title">Resultados</h2>
+
+    <details class="tag-filter" id="tag-filter">
+      <summary>Filtrar por tags</summary>
+      <div class="tag-picker">
+        {% for group_name, group_tags in tag_groups.items() %}
+          <div class="tag-group {{ 'tag-group-sensitive' if group_name == 'Conteúdo sensível' else '' }}">
+            <p class="tag-group-title">
+              {% if group_name == 'Conteúdo sensível' %}<span class="tag-warning-icon">⚠</span>{% endif %}
+              {{ group_name }}
+            </p>
+            {% if group_name == 'Conteúdo sensível' %}
+              <p class="tag-hint">Esses filtros trazem conteúdo adulto/explícito.</p>
+            {% endif %}
+            <div class="tag-options">
+              {% for t in group_tags %}
+                <label class="tag-chip {{ 'tag-chip-sensitive' if t in sensitive_tags else '' }}">
+                  <input type="checkbox" name="tags" value="{{ t }}" {{ "checked" if t in selected_tags else "" }}>
+                  {{ t }}
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </details>
+
     <div class="grid-covers" id="grid-covers"></div>
     <p class="empty-state" id="search-empty" hidden>Nenhum mangá encontrado para essa busca.</p>
   </div>
