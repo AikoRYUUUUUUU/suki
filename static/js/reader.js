@@ -17,6 +17,40 @@ async function initReader() {
     return;
   }
 
+  if (isAdultManga(manga) && sessionStorage.getItem("age_confirmed") !== "1") {
+    showAgeGate(manga, () => startReader(manga, chapter));
+    return;
+  }
+
+  startReader(manga, chapter);
+}
+
+function showAgeGate(manga, onConfirm) {
+  const overlay = document.createElement("div");
+  overlay.className = "age-gate-overlay";
+  overlay.innerHTML = `
+    <div class="age-gate-box">
+      <p class="age-gate-warning">⚠ Conteúdo +18</p>
+      <p class="age-gate-text">"${manga.title}" contém material para maiores de 18 anos. Confirme que você tem 18 anos ou mais para continuar.</p>
+      <div class="age-gate-actions">
+        <button type="button" class="btn btn-primary" id="age-gate-confirm">Sim, tenho 18 anos ou mais</button>
+        <button type="button" class="btn btn-ghost" id="age-gate-leave">Sair</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  document.getElementById("age-gate-confirm").addEventListener("click", () => {
+    sessionStorage.setItem("age_confirmed", "1");
+    overlay.remove();
+    onConfirm();
+  });
+  document.getElementById("age-gate-leave").addEventListener("click", () => {
+    window.location.href = `manga.html?id=${manga.id}`;
+  });
+}
+
+function startReader(manga, chapter) {
   state.manga = manga;
   state.chapter = chapter;
   state.pages = chapter.pages;
@@ -30,6 +64,14 @@ async function initReader() {
   updateCounter();
   bindControls();
   bindKeyboard();
+
+  // se chegamos vindos de "voltar capítulo", abre já na última página
+  if (qs("p") === "last" && state.pages.length) {
+    state.mode = "paginated";
+    state.current = state.pages.length - 1;
+    renderPages();
+    updateCounter();
+  }
 }
 
 function renderPages() {
@@ -111,13 +153,6 @@ function bindKeyboard() {
   });
 }
 
-// se chegamos vindos de "voltar capítulo", abre já na última página
-window.addEventListener("DOMContentLoaded", async () => {
-  await initReader();
-  if (qs("p") === "last" && state.pages.length) {
-    state.mode = "paginated";
-    state.current = state.pages.length - 1;
-    renderPages();
-    updateCounter();
-  }
+window.addEventListener("DOMContentLoaded", () => {
+  initReader();
 });

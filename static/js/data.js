@@ -39,12 +39,21 @@ function qs(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
+const ADULT_TAGS = new Set(["Adulto (18+)", "Hentai", "Smut", "Mature"]);
+
+function isAdultManga(m) {
+  return (m.genres || []).some(g => ADULT_TAGS.has(g));
+}
+
 function mangaCardHTML(m) {
   return `
     <a class="card-manga" href="manga.html?id=${m.id}">
       <div class="cover-frame">
         <img src="${m.cover}" alt="Capa de ${m.title}" loading="lazy">
-        <span class="badge-status">${m.status}</span>
+        <div class="cover-badges">
+          <span class="badge-status">${m.status}</span>
+          ${isAdultManga(m) ? '<span class="badge-adult">+18</span>' : ""}
+        </div>
       </div>
       <h3>${m.title}</h3>
       <p class="meta">${m.chapters.length} capítulos · ★ ${m.rating}</p>

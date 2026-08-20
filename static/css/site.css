@@ -233,7 +233,7 @@ img { max-width: 100%; display: block; }
 .hero-cover {
   position: relative;
   justify-self: end;
-  width: 280px;
+  width: 380px;
   transition: opacity .35s ease;
 }
 .hero-cover.is-fading { opacity: 0; }
@@ -306,10 +306,15 @@ img { max-width: 100%; display: block; }
   transition: transform .35s ease;
 }
 .card-manga:hover img { transform: scale(1.045); }
-.badge-status {
+.cover-badges {
   position: absolute;
   top: 10px;
   left: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+}
+.badge-status {
   background: rgba(183, 71, 42, .82);
   border: 1px solid var(--vermillion);
   color: var(--paper);
@@ -319,6 +324,18 @@ img { max-width: 100%; display: block; }
   padding: 4px 8px;
   border-radius: 2px;
   backdrop-filter: blur(4px);
+}
+.badge-adult {
+  background: rgba(122, 8, 8, .92);
+  border: 1px solid #7a0808;
+  color: var(--paper);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: 4px 8px;
+  border-radius: 2px;
+  backdrop-filter: blur(4px);
+  margin-left: auto;
 }
 .card-manga h3 {
   font-family: var(--font-body);
@@ -533,6 +550,43 @@ footer.site-footer {
 body.reader-body {
   background: #0c0b10;
 }
+.age-gate-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(6, 5, 9, .92);
+  backdrop-filter: blur(6px);
+}
+.age-gate-box {
+  max-width: 420px;
+  padding: 32px;
+  border: 1px solid var(--vermillion);
+  border-radius: var(--radius);
+  background: var(--ink-soft);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .7);
+  text-align: center;
+}
+.age-gate-warning {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--vermillion);
+  margin: 0 0 14px;
+}
+.age-gate-text {
+  color: var(--paper-dim);
+  font-size: 14.5px;
+  line-height: 1.6;
+  margin: 0 0 26px;
+}
+.age-gate-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.age-gate-actions .btn { width: 100%; justify-content: center; }
 .reader-bar {
   position: sticky;
   top: 0;
@@ -613,7 +667,7 @@ body.reader-body {
 
 @media (max-width: 760px) {
   .hero .wrap { grid-template-columns: 1fr; }
-  .hero-cover { justify-self: start; width: 190px; }
+  .hero-cover { justify-self: start; width: 240px; }
   .manga-hero .wrap { grid-template-columns: 1fr; }
   .manga-hero .cover-frame { width: 180px; }
   .nav-links { display: none; }
