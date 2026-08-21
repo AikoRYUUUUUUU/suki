@@ -6,6 +6,7 @@ import secrets
 import shutil
 import sqlite3
 import subprocess
+import urllib.request
 from datetime import date
 from functools import wraps
 from pathlib import Path
@@ -34,6 +35,7 @@ WSGI_FILE_PATH = os.environ.get("WSGI_FILE_PATH")
 CUSDIS_APP_ID = os.environ.get("CUSDIS_APP_ID")
 CUSDIS_WEBHOOK_SECRET = os.environ.get("CUSDIS_WEBHOOK_SECRET")
 GOOGLE_SITE_VERIFICATION = os.environ.get("GOOGLE_SITE_VERIFICATION")
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 
 SITE_DESCRIPTION = "Leia mangás e webtoons traduzidos em português, de graça e sem enrolação. Catálogo atualizado toda semana."
 
@@ -72,6 +74,31 @@ def og_image_url(cover):
     if cover.startswith(("http://", "https://")):
         return cover
     return absolute_url(cover)
+
+
+def notify_discord(title, url, description, cover):
+    """Dispara o webhook de anúncio no Discord. Best-effort: sem
+    DISCORD_WEBHOOK_URL configurada, ou se o Discord estiver fora do ar, não
+    pode derrubar o fluxo de publicação do admin - só loga e segue."""
+    if not DISCORD_WEBHOOK_URL:
+        return
+    embed = {
+        "title": title,
+        "url": url,
+        "description": description,
+        "color": 0xB7472A,
+        "thumbnail": {"url": og_image_url(cover)},
+        "footer": {"text": "Suki"},
+    }
+    body = json.dumps({"embeds": [embed]}).encode("utf-8")
+    req = urllib.request.Request(
+        DISCORD_WEBHOOK_URL, data=body, method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"[discord webhook] falhou: {e}")
 
 
 CSP = (
@@ -681,6 +708,13 @@ def create_manga():
     except mangadb.ValidationError as e:
         return render_new_manga_error(str(e))
 
+    notify_discord(
+        title=f"📚 Novo mangá: {request.form.get('title')}",
+        url=absolute_url(url_for("manga_page")) + f"?id={manga_id}",
+        description=truncate_words(request.form.get("synopsis") or "", 300),
+        cover=mangadb.static_url(cover_url) if cover_url else None,
+    )
+
     return redirect(url_for("admin"))
 
 
@@ -884,6 +918,13 @@ def create_chapter(manga_id):
     except mangadb.ValidationError as e:
         return render_error(str(e))
 
+    notify_discord(
+        title=f"🆕 {manga_title} — Cap. {mangadb.format_number(number_val)}",
+        url=absolute_url(url_for("reader_page")) + f"?id={manga_id}&ch={chapter_id}",
+        description=title,
+        cover=mangadb.static_url(mangadb.get_manga_cover(manga_id)),
+    )
+
     return redirect(url_for("admin"))
 
 
@@ -906,7 +947,8 @@ def bulk_create_chapter(manga_id):
     validação de sempre (mangadb.validate_chapter_fields), só que respondendo
     em JSON em vez de redirecionar, pra ser chamada repetidamente pelo JS do
     upload em massa (uma vez por .zip) sem navegar a página a cada capítulo."""
-    if not mangadb.manga_exists(manga_id):
+    manga_title = mangadb.get_manga_title(manga_id)
+    if manga_title is None:
         abort(404)
 
     data = request.get_json(silent=True) or {}
@@ -932,6 +974,13 @@ def bulk_create_chapter(manga_id):
         )
     except mangadb.ValidationError as e:
         return jsonify({"error": str(e)}), 400
+
+    notify_discord(
+        title=f"🆕 {manga_title} — Cap. {mangadb.format_number(number_val)}",
+        url=absolute_url(url_for("reader_page")) + f"?id={manga_id}&ch={chapter_id}",
+        description=title,
+        cover=mangadb.static_url(mangadb.get_manga_cover(manga_id)),
+    )
 
     return jsonify({"ok": True, "chapter_id": chapter_id})
 
