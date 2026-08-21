@@ -477,6 +477,15 @@ def set_manga_discord_role(manga_id, role_id):
     conn.close()
 
 
+def get_mangas_without_discord_role():
+    conn = get_connection()
+    rows = [dict(r) for r in conn.execute(
+        "SELECT id, title FROM mangas WHERE discord_role_id IS NULL ORDER BY title"
+    )]
+    conn.close()
+    return rows
+
+
 def update_manga_status(manga_id, status):
     conn = get_connection()
     conn.execute("UPDATE mangas SET status = ? WHERE id = ?", (status, manga_id))

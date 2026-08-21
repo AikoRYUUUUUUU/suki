@@ -481,12 +481,29 @@ def logout():
 def admin():
     candidates = mangadb.get_migration_candidates()
     migration_pending_count = len(candidates["covers"]) + len(candidates["pages"])
+    discord_roles_pending = (
+        mangadb.get_mangas_without_discord_role()
+        if BOT_BASE_URL and BOT_INTERNAL_SECRET else []
+    )
     return render_template(
         "admin.html",
         mangas=mangadb.get_dashboard_mangas(),
         statuses=mangadb.MANGA_STATUSES,
         migration_pending_count=migration_pending_count,
+        discord_roles_pending_count=len(discord_roles_pending),
     )
+
+
+@app.route("/admin/discord-roles/backfill", methods=["POST"])
+@login_required
+def backfill_discord_roles():
+    """Cria o cargo no Discord pros mangás que ficaram sem (cadastrados antes
+    do bot existir, ou que falharam na hora - bot fora do ar, etc)."""
+    for manga in mangadb.get_mangas_without_discord_role():
+        role_id = create_discord_role(manga["id"], manga["title"])
+        if role_id:
+            mangadb.set_manga_discord_role(manga["id"], role_id)
+    return redirect(url_for("admin"))
 
 
 @app.route("/admin/uploads/presign", methods=["POST"])

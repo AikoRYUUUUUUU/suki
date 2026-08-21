@@ -49,6 +49,22 @@
     </div>
   {% endif %}
 
+  {% if discord_roles_pending_count %}
+    <div class="admin-card migration-card">
+      <div class="migration-header">
+        <div>
+          <p class="eyebrow">Discord</p>
+          <h2>Cargos pendentes</h2>
+          <p class="admin-hint">{{ discord_roles_pending_count }} mangá{{ 's' if discord_roles_pending_count != 1 else '' }} ainda sem cargo de notificação no Discord.</p>
+        </div>
+        <form action="{{ url_for('backfill_discord_roles') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-primary">Criar cargos pendentes</button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
   {% if mangas %}
     <div class="manga-grid">
       {% for m in mangas %}
