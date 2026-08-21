@@ -153,6 +153,13 @@ def get_manga_title(manga_id):
     return row["title"] if row else None
 
 
+def get_manga_synopsis(manga_id):
+    conn = get_connection()
+    row = conn.execute("SELECT synopsis FROM mangas WHERE id = ?", (manga_id,)).fetchone()
+    conn.close()
+    return row["synopsis"] if row else None
+
+
 def next_chapter_number(manga_id):
     conn = get_connection()
     row = conn.execute(

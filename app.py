@@ -80,7 +80,7 @@ def og_image_url(cover):
     return absolute_url(cover)
 
 
-def notify_discord(title, url, description, cover, role_id=None):
+def notify_discord(title, url, description, cover, role_id=None, synopsis=None):
     """Dispara o webhook de anúncio no Discord. Best-effort: sem
     DISCORD_WEBHOOK_URL configurada, ou se o Discord estiver fora do ar, não
     pode derrubar o fluxo de publicação do admin - só loga e segue."""
@@ -91,9 +91,11 @@ def notify_discord(title, url, description, cover, role_id=None):
         "url": url,
         "description": description,
         "color": 0xB7472A,
-        "thumbnail": {"url": og_image_url(cover)},
-        "footer": {"text": "Suki"},
+        "image": {"url": og_image_url(cover)},
+        "footer": {"text": "Equipe Suki Mangás"},
     }
+    if synopsis:
+        embed["fields"] = [{"name": "Sinopse", "value": truncate_words(synopsis, 300)}]
     payload = {"embeds": [embed]}
     if role_id:
         # Menção só notifica quem tem o cargo se estiver em "content" - dentro do
@@ -1136,6 +1138,7 @@ def create_chapter(manga_id):
         description=title,
         cover=mangadb.static_url(mangadb.get_manga_cover(manga_id)),
         role_id=mangadb.get_manga_discord_role(manga_id),
+        synopsis=mangadb.get_manga_synopsis(manga_id),
     )
 
     return redirect(url_for("admin"))
@@ -1194,6 +1197,7 @@ def bulk_create_chapter(manga_id):
         description=title,
         cover=mangadb.static_url(mangadb.get_manga_cover(manga_id)),
         role_id=mangadb.get_manga_discord_role(manga_id),
+        synopsis=mangadb.get_manga_synopsis(manga_id),
     )
 
     return jsonify({"ok": True, "chapter_id": chapter_id})
