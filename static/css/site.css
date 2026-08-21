@@ -435,6 +435,8 @@ footer.site-footer {
   font-size: 13px;
   text-align: center;
 }
+footer.site-footer a { text-decoration: underline; text-underline-offset: 2px; }
+footer.site-footer a:hover { color: var(--paper); }
 
 /* ---------- PÁGINA DE CAPA (manga.html) ---------- */
 .manga-hero {
