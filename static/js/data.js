@@ -45,7 +45,21 @@ function isAdultManga(m) {
   return (m.genres || []).some(g => ADULT_TAGS.has(g));
 }
 
+function getLatestChapter(manga) {
+  if (!manga.chapters.length) return null;
+  return [...manga.chapters].sort((a, b) => b.number - a.number)[0];
+}
+
+function daysSinceRelease(iso) {
+  const released = new Date(iso + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.floor((today - released) / 86400000);
+}
+
 function mangaCardHTML(m) {
+  const latest = getLatestChapter(m);
+  const isNew = latest && daysSinceRelease(latest.releaseDate) <= 3;
   return `
     <a class="card-manga" href="manga.html?id=${m.id}">
       <div class="cover-frame">
@@ -56,6 +70,9 @@ function mangaCardHTML(m) {
         </div>
       </div>
       <h3>${m.title}</h3>
+      ${latest ? `
+        <p class="latest-chapter">Cap. ${latest.number}${isNew ? ' <span class="badge-new">NOVO</span>' : ""}</p>
+      ` : ""}
       <p class="meta">${m.chapters.length} capítulos · ★ ${m.rating}</p>
     </a>
   `;
