@@ -14,6 +14,27 @@ function renderGrid(mangas) {
   document.getElementById("grid-covers").innerHTML = mangas.map(mangaCardHTML).join("");
 }
 
+function continueCardHTML(entry) {
+  return `
+    <a class="card-manga" href="reader.html?id=${entry.id}&ch=${entry.lastChapterId}">
+      <div class="cover-frame">
+        <img src="${entry.cover}" alt="Capa de ${entry.title}" loading="lazy">
+      </div>
+      <h3>${entry.title}</h3>
+      <p class="meta">Continuar — Cap. ${entry.lastChapterNumber}</p>
+    </a>
+  `;
+}
+
+function renderContinueReading(mangas) {
+  const mangaIds = new Set(mangas.map(m => m.id));
+  const entries = getRecentHistory(12).filter(e => mangaIds.has(e.id));
+  if (!entries.length) return;
+
+  document.getElementById("grid-continue").innerHTML = entries.map(e => continueCardHTML(e)).join("");
+  document.getElementById("continuar").style.display = "";
+}
+
 function renderHeroManga(manga) {
   document.getElementById("hero-manga-title").textContent = manga.title;
   document.getElementById("hero-synopsis").textContent = manga.synopsis;
@@ -59,6 +80,7 @@ async function renderHome() {
   if (!mangas.length) return;
 
   renderGrid(mangas);
+  renderContinueReading(mangas);
   startHeroRotation(mangas);
 }
 

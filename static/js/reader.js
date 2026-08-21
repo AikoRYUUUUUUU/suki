@@ -60,6 +60,8 @@ function startReader(manga, chapter) {
   document.getElementById("rt-manga").textContent = manga.title;
   document.getElementById("rt-chapter").textContent = `Cap. ${chapter.number} — ${chapter.title}`;
 
+  recordChapterRead(manga, chapter);
+
   renderPages();
   updateCounter();
   populateChapterSelects();

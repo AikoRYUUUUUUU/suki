@@ -30,8 +30,17 @@ async function renderMangaPage() {
 
   const sorted = [...manga.chapters].sort((a, b) => a.number - b.number);
   const startBtn = document.getElementById("start-reading");
+  const history = getMangaHistory(manga.id);
+  const lastRead = history && sorted.some(c => c.id === history.lastChapterId)
+    ? history : null;
+
   if (sorted.length > 0) {
-    startBtn.href = `reader.html?id=${manga.id}&ch=${sorted[0].id}`;
+    if (lastRead) {
+      startBtn.href = `reader.html?id=${manga.id}&ch=${lastRead.lastChapterId}`;
+      startBtn.textContent = `Continuar — Cap. ${lastRead.lastChapterNumber}`;
+    } else {
+      startBtn.href = `reader.html?id=${manga.id}&ch=${sorted[0].id}`;
+    }
   } else {
     startBtn.removeAttribute("href");
     startBtn.classList.add("btn-disabled");
@@ -42,7 +51,7 @@ async function renderMangaPage() {
     .slice()
     .reverse()
     .map(c => `
-      <a class="chapter-row" href="reader.html?id=${manga.id}&ch=${c.id}">
+      <a class="chapter-row${isChapterRead(manga.id, c.id) ? " is-read" : ""}" href="reader.html?id=${manga.id}&ch=${c.id}">
         <div class="left">
           <span class="chapter-num">${String(c.number).padStart(2, "0")}</span>
           <span class="ch-title">${c.title}</span>

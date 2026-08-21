@@ -614,6 +614,8 @@ footer.site-footer {
   font-size: 12.5px;
   color: var(--gray);
 }
+.chapter-row.is-read { opacity: .5; }
+.chapter-row.is-read:hover { opacity: .85; }
 
 .comments {
   padding: 0 0 80px;
@@ -927,6 +929,40 @@ body.reader-body {
   .nav-links a:first-child { border-top: none; }
   .topbar-search { max-width: none; }
   .topbar-search select { display: none; }
+
+  .wrap { padding: 0 16px; }
+  .topbar .wrap { gap: 14px; }
+  .brand .wordmark { height: 26px; }
+  .brand .stamp { width: 22px; height: 22px; }
+  /* iOS dá zoom automático ao focar input com font-size < 16px */
+  .topbar-search input[type="text"] { font-size: 16px; }
+
+  .stat-row { flex-wrap: wrap; row-gap: 14px; }
+
+  .chapter-row { flex-wrap: wrap; gap: 6px; }
+  .chapter-row .left { min-width: 0; flex: 1 1 auto; }
+  .chapter-row .ch-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .comment-form input[type="text"],
+  .comment-form textarea { font-size: 16px; }
+
+  /* barra do leitor: título trunca em vez de empurrar os controles pra fora
+     da tela - sem isso a linha estourava a largura em telas estreitas */
+  .reader-bar .wrap { gap: 10px; }
+  .reader-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .reader-controls { gap: 8px; flex-shrink: 0; }
+  .chapter-select { max-width: 108px; font-size: 11.5px; }
+  .page-counter { min-width: 38px; font-size: 12px; }
 }
 
 /* ---------- página de erro (404/500) ---------- */
