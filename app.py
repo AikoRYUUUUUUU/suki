@@ -40,6 +40,9 @@ DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
 DISCORD_GUILD_ID = os.environ.get("DISCORD_GUILD_ID")
 DISCORD_PUBLIC_KEY = os.environ.get("DISCORD_PUBLIC_KEY")
 DISCORD_ROLES_CHANNEL_ID = os.environ.get("DISCORD_ROLES_CHANNEL_ID")
+DISCORD_ADMIN_USER_ID = os.environ.get("DISCORD_ADMIN_USER_ID")
+
+VOLUNTEER_AREAS = ["Tradução", "Limpeza", "Diagramação"]
 
 SITE_DESCRIPTION = "Leia mangás e webtoons traduzidos em português, de graça e sem enrolação. Catálogo atualizado toda semana."
 
@@ -173,6 +176,17 @@ def delete_discord_role(role_id):
         print(f"[discord] exclusão de cargo falhou: {e}")
 
 
+def dm_discord_user(user_id, embed):
+    """Best-effort - abre (ou reaproveita) uma DM com o usuário e manda o embed."""
+    if not user_id or not DISCORD_BOT_TOKEN:
+        return
+    try:
+        channel = discord_api("POST", "/users/@me/channels", {"recipient_id": user_id})
+        discord_api("POST", f"/channels/{channel['id']}/messages", {"embeds": [embed]})
+    except Exception as e:
+        print(f"[discord] DM falhou: {e}")
+
+
 CSP = (
     "default-src 'self'; "
     "img-src 'self' https://*.r2.dev; "
@@ -256,6 +270,54 @@ def search_page():
         selected_tags=request.args.getlist("tags"),
         meta_description=meta_description,
         canonical_url=absolute_url(url_for("search_page")),
+        og_image=default_og_image(),
+    )
+
+
+@app.route("/trabalhe-conosco.html", methods=["GET", "POST"])
+@limiter.limit("3 per hour", methods=["POST"])
+def volunteer_form():
+    error = None
+    sent = request.args.get("sent") == "1"
+
+    if request.method == "POST":
+        if request.form.get("website"):  # honeypot - bot preenche, humano não vê o campo
+            return redirect(url_for("volunteer_form", sent=1))
+
+        name = (request.form.get("name") or "").strip()
+        age = (request.form.get("age") or "").strip()
+        discord_handle = (request.form.get("discord_handle") or "").strip()
+        areas = [a for a in request.form.getlist("areas") if a in VOLUNTEER_AREAS]
+        availability = (request.form.get("availability") or "").strip()
+        experience = (request.form.get("experience") or "").strip()
+
+        if not name or not discord_handle or not areas or not availability or not age.isdigit():
+            error = "Preenche nome, idade, Discord, pelo menos uma área e disponibilidade."
+        else:
+            fields = [
+                {"name": "Nome", "value": name, "inline": True},
+                {"name": "Idade", "value": age, "inline": True},
+                {"name": "Discord", "value": discord_handle, "inline": True},
+                {"name": "Área de interesse", "value": ", ".join(areas), "inline": False},
+                {"name": "Disponibilidade", "value": availability, "inline": False},
+            ]
+            if experience:
+                fields.append({"name": "Experiência", "value": truncate_words(experience, 500), "inline": False})
+            dm_discord_user(DISCORD_ADMIN_USER_ID, {
+                "title": "📋 Nova candidatura — Trabalhe conosco",
+                "color": 0xB7472A,
+                "fields": fields,
+                "footer": {"text": "Equipe Suki Mangás"},
+            })
+            return redirect(url_for("volunteer_form", sent=1))
+
+    return render_template(
+        "trabalhe_conosco.html",
+        areas=VOLUNTEER_AREAS,
+        error=error,
+        sent=sent,
+        meta_description="Quer ajudar com tradução, limpeza ou diagramação? Candidate-se pra fazer parte da equipe da Suki.",
+        canonical_url=absolute_url(url_for("volunteer_form")),
         og_image=default_og_image(),
     )
 

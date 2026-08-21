@@ -1009,3 +1009,56 @@ body.reader-body {
   margin: 0 0 28px;
   max-width: 480px;
 }
+
+/* ---------- trabalhe conosco ---------- */
+.wrap-narrow { max-width: 640px; }
+.volunteer-intro {
+  color: var(--paper-dim);
+  max-width: 60ch;
+  margin-bottom: 32px;
+}
+.volunteer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.volunteer-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--paper-dim);
+}
+.volunteer-form input[type="text"],
+.volunteer-form input[type="number"],
+.volunteer-form textarea {
+  background: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 10px 14px;
+}
+.volunteer-form textarea { min-height: 90px; resize: vertical; }
+.volunteer-form input:focus,
+.volunteer-form textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+.volunteer-form .tag-picker { margin: 4px 0; }
+.volunteer-form .btn { align-self: flex-start; }
+.volunteer-error {
+  color: var(--vermillion);
+  font-size: 13.5px;
+  margin: -6px 0 0;
+}
+.volunteer-sent {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--ink-soft);
+  padding: 24px;
+  color: var(--paper);
+}
+@media (max-width: 760px) {
+  .volunteer-form input[type="text"],
+  .volunteer-form input[type="number"],
+  .volunteer-form textarea { font-size: 16px; }
+}

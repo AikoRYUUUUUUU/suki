@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trabalhe conosco — Suki</title>
+<meta name="description" content="{{ meta_description }}">
+<link rel="canonical" href="{{ canonical_url }}">
+<meta name="robots" content="noindex, follow">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Suki">
+<meta property="og:title" content="Trabalhe conosco — Suki">
+<meta property="og:description" content="{{ meta_description }}">
+<meta property="og:url" content="{{ canonical_url }}">
+<meta property="og:image" content="{{ og_image }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Trabalhe conosco — Suki">
+<meta name="twitter:description" content="{{ meta_description }}">
+<meta name="twitter:image" content="{{ og_image }}">
+
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='assets/logo.svg') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a href="/" class="brand"><img class="stamp" src="{{ url_for('static', filename='assets/logo.svg') }}" alt=""><img class="wordmark" src="{{ url_for('static', filename='assets/wordmark.svg') }}" alt="Suki"></a>
+    <nav class="nav-links" id="nav-links">
+      <a href="{{ url_for('search_page') }}">Biblioteca</a>
+      <a href="/#lancamentos">Lançamentos</a>
+      <a href="{{ url_for('search_page') }}#tag-filter">Gêneros</a>
+      <a href="{{ url_for('volunteer_form') }}">Trabalhe conosco</a>
+    </nav>
+    <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="nav-links">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<section class="shelf">
+  <div class="wrap wrap-narrow">
+    <p class="eyebrow">Equipe</p>
+    <h1 class="section-title">Trabalhe conosco</h1>
+    <p class="volunteer-intro">
+      A Suki é feita por voluntários. Se você quer ajudar com tradução, limpeza (redraw) ou
+      diagramação, deixa seus dados aqui embaixo — a gente te chama no Discord.
+    </p>
+
+    {% if sent %}
+      <div class="volunteer-sent">
+        <p>✅ Candidatura enviada! Fica de olho no Discord — a gente chama por lá.</p>
+      </div>
+    {% else %}
+      <form class="volunteer-form" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="text" name="website" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+        {% if error %}<p class="volunteer-error">{{ error }}</p>{% endif %}
+
+        <label>
+          <span>Nome</span>
+          <input type="text" name="name" maxlength="80" required>
+        </label>
+
+        <label>
+          <span>Idade</span>
+          <input type="number" name="age" min="10" max="100" required>
+        </label>
+
+        <label>
+          <span>Discord (seu nick, pra gente chamar você)</span>
+          <input type="text" name="discord_handle" maxlength="60" placeholder="seunick" required>
+        </label>
+
+        <div class="tag-picker">
+          <p class="tag-group-title">Área de interesse</p>
+          <div class="tag-options">
+            {% for a in areas %}
+              <label class="tag-chip">
+                <input type="checkbox" name="areas" value="{{ a }}">
+                {{ a }}
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <label>
+          <span>Disponibilidade (horas por semana, aproximado)</span>
+          <input type="text" name="availability" maxlength="60" placeholder="ex: 5h/semana" required>
+        </label>
+
+        <label>
+          <span>Experiência anterior (opcional - não precisa de portfólio)</span>
+          <textarea name="experience" maxlength="1000"></textarea>
+        </label>
+
+        <button type="submit" class="btn btn-primary">Enviar candidatura</button>
+      </form>
+    {% endif %}
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="wrap">© 2026 Suki · Biblioteca de mangás · <a href="https://discord.gg/UUVfCsTDkV" target="_blank" rel="noopener">Discord</a></div>
+</footer>
+
+<script src="{{ url_for('static', filename='js/nav.js') }}"></script>
+</body>
+</html>
