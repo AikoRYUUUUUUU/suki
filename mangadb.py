@@ -817,36 +817,107 @@ def add_vote(manga_id, voter_hash, value):
     return effective_rating(row), row["rating_count"]
 
 
-# ---------- fila de aprovação automática de comentários (Cusdis) ----------
+# ---------- comentários nativos ----------
 
-def add_pending_approval(approve_link, nickname, content, page_title):
-    """Um webhook duplicado do Cusdis (reenvio automático deles) bate na mesma
-    UNIQUE(approve_link) - ignora silenciosamente em vez de duplicar a fila."""
+def add_comment(manga_id, parent_id, author_name, body):
+    """Publica na hora, sem fila de aprovação. Resposta a uma resposta é
+    achatada pro comentário raiz (parent_id do pai, se ele tiver um) - assim a
+    thread nunca passa de 2 níveis, o que casa com o que a UI mostra."""
     conn = get_connection()
     try:
-        conn.execute(
-            "INSERT INTO pending_comment_approvals (approve_link, nickname, content, page_title, created_at) "
+        if parent_id:
+            parent = conn.execute(
+                "SELECT id, parent_id FROM comments WHERE id = ? AND manga_id = ?",
+                (parent_id, manga_id),
+            ).fetchone()
+            if parent is None:
+                parent_id = None
+            elif parent["parent_id"]:
+                parent_id = parent["parent_id"]
+
+        cur = conn.execute(
+            "INSERT INTO comments (manga_id, parent_id, author_name, body, created_at) "
             "VALUES (?, ?, ?, ?, ?)",
-            (approve_link, nickname, content, page_title, datetime.utcnow().isoformat()),
+            (manga_id, parent_id, author_name, body, datetime.utcnow().isoformat()),
         )
         conn.commit()
-    except sqlite3.IntegrityError:
-        pass
+        return cur.lastrowid
     finally:
         conn.close()
 
 
-def get_pending_approvals():
+def get_comments(manga_id):
+    """Monta a árvore (raízes com `replies`) em Python a partir de uma única
+    query - o volume por mangá é pequeno o bastante pra isso ser mais simples
+    que uma query recursiva, sem trade-off de performance real."""
     conn = get_connection()
     rows = [dict(r) for r in conn.execute(
-        "SELECT id, approve_link, nickname, content, page_title FROM pending_comment_approvals ORDER BY id"
+        "SELECT id, parent_id, author_name, body, created_at, score "
+        "FROM comments WHERE manga_id = ?",
+        (manga_id,),
     )]
+    conn.close()
+
+    by_id = {r["id"]: {**r, "replies": []} for r in rows}
+    top_level = []
+    for r in rows:
+        node = by_id[r["id"]]
+        if r["parent_id"] and r["parent_id"] in by_id:
+            by_id[r["parent_id"]]["replies"].append(node)
+        else:
+            top_level.append(node)
+
+    top_level.sort(key=lambda c: (-c["score"], c["created_at"]))
+    for node in by_id.values():
+        node["replies"].sort(key=lambda c: c["created_at"])
+
+    return top_level
+
+
+def comment_exists(comment_id):
+    conn = get_connection()
+    row = conn.execute("SELECT 1 FROM comments WHERE id = ?", (comment_id,)).fetchone()
+    conn.close()
+    return row is not None
+
+
+def vote_comment(comment_id, voter_hash, value):
+    """Mesmo desenho de add_vote() pra avaliação de mangá: chave composta em
+    comment_votes barra voto duplicado (levanta IntegrityError, quem chama
+    decide como responder), score fica cacheado em comments.score."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            "INSERT INTO comment_votes (comment_id, voter_hash, value) VALUES (?, ?, ?)",
+            (comment_id, voter_hash, value),
+        )
+        conn.execute(
+            "UPDATE comments SET score = score + ? WHERE id = ?",
+            (value, comment_id),
+        )
+        conn.commit()
+        row = conn.execute("SELECT score FROM comments WHERE id = ?", (comment_id,)).fetchone()
+    finally:
+        conn.close()
+    return row["score"]
+
+
+def get_all_comments_admin():
+    conn = get_connection()
+    rows = [dict(r) for r in conn.execute("""
+        SELECT c.id, c.author_name, c.body, c.created_at, c.score, c.parent_id,
+               c.manga_id, m.title AS manga_title
+        FROM comments c
+        JOIN mangas m ON m.id = c.manga_id
+        ORDER BY c.created_at DESC
+    """)]
     conn.close()
     return rows
 
 
-def delete_pending_approval(approval_id):
+def delete_comment(comment_id):
+    """ON DELETE CASCADE cuida das respostas (parent_id) e dos votos junto."""
     conn = get_connection()
-    conn.execute("DELETE FROM pending_comment_approvals WHERE id = ?", (approval_id,))
+    conn.execute("DELETE FROM comments WHERE id = ?", (comment_id,))
     conn.commit()
     conn.close()

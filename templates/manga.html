@@ -87,15 +87,22 @@
   </div>
 </section>
 
-{% if cusdis_app_id %}
 <section class="comments">
   <div class="wrap">
     <p class="eyebrow">Comunidade</p>
     <h2 class="section-title">Comentários</h2>
-    <div id="comments-mount" data-cusdis-app-id="{{ cusdis_app_id }}"></div>
+
+    <form class="comment-form" id="comment-form">
+      <input type="text" name="author_name" placeholder="Seu nome" maxlength="50" required>
+      <textarea name="body" placeholder="Deixe um comentário..." maxlength="2000" required></textarea>
+      <input type="text" name="website" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button type="submit" class="btn btn-primary">Comentar</button>
+      <p class="comment-form-msg"></p>
+    </form>
+
+    <div class="comment-list" id="comment-list"></div>
   </div>
 </section>
-{% endif %}
 
 <footer class="site-footer">
   <div class="wrap">© 2026 Suki · Biblioteca de mangás</div>

@@ -32,8 +32,6 @@ ADMIN_USERNAME = os.environ["ADMIN_USERNAME"]
 ADMIN_PASSWORD_HASH = os.environ["ADMIN_PASSWORD_HASH"]
 GITHUB_WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET")
 WSGI_FILE_PATH = os.environ.get("WSGI_FILE_PATH")
-CUSDIS_APP_ID = os.environ.get("CUSDIS_APP_ID")
-CUSDIS_WEBHOOK_SECRET = os.environ.get("CUSDIS_WEBHOOK_SECRET")
 GOOGLE_SITE_VERIFICATION = os.environ.get("GOOGLE_SITE_VERIFICATION")
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 BOT_BASE_URL = os.environ.get("BOT_BASE_URL")
@@ -135,10 +133,10 @@ def create_discord_role(manga_id, title):
 CSP = (
     "default-src 'self'; "
     "img-src 'self' https://*.r2.dev; "
-    "script-src 'self' https://cusdis.com; "
+    "script-src 'self'; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com; "
-    "connect-src 'self' https://cusdis.com https://graphql.anilist.co https://*.r2.cloudflarestorage.com https://translate.googleapis.com; "
+    "connect-src 'self' https://graphql.anilist.co https://*.r2.cloudflarestorage.com https://translate.googleapis.com; "
     "frame-ancestors 'self'; "
     "base-uri 'self'; "
     "form-action 'self'; "
@@ -256,7 +254,6 @@ def manga_page():
 
     return render_template(
         "manga.html",
-        cusdis_app_id=CUSDIS_APP_ID,
         manga=manga,
         page_title=page_title,
         meta_description=meta_description,
@@ -348,6 +345,67 @@ def rate_manga(manga_id):
     return jsonify({"rating": rating, "ratingCount": rating_count})
 
 
+COMMENT_NAME_MAX = 50
+COMMENT_BODY_MAX = 2000
+
+
+@app.route("/api/mangas/<manga_id>/comments", methods=["GET"])
+def list_comments(manga_id):
+    if not mangadb.manga_exists(manga_id):
+        abort(404)
+    return jsonify({"comments": mangadb.get_comments(manga_id)})
+
+
+@app.route("/api/mangas/<manga_id>/comments", methods=["POST"])
+@csrf.exempt
+@limiter.limit("6 per minute")
+def create_comment(manga_id):
+    if not mangadb.manga_exists(manga_id):
+        abort(404)
+
+    data = request.get_json(silent=True) or {}
+
+    # Honeypot: campo escondido via CSS que só bot preenche - finge sucesso
+    # sem gravar nada, pra não denunciar pro spammer que foi filtrado.
+    if (data.get("website") or "").strip():
+        return jsonify({"ok": True}), 201
+
+    author_name = (data.get("author_name") or "").strip()
+    body = (data.get("body") or "").strip()
+    parent_id = data.get("parent_id")
+
+    if not author_name or len(author_name) > COMMENT_NAME_MAX:
+        abort(400)
+    if not body or len(body) > COMMENT_BODY_MAX:
+        abort(400)
+    if parent_id is not None:
+        if not isinstance(parent_id, int) or not mangadb.comment_exists(parent_id):
+            abort(400)
+
+    comment_id = mangadb.add_comment(manga_id, parent_id, author_name, body)
+    return jsonify({"id": comment_id}), 201
+
+
+@app.route("/api/comments/<int:comment_id>/vote", methods=["POST"])
+@csrf.exempt
+@limiter.limit("30 per minute")
+def vote_on_comment(comment_id):
+    if not mangadb.comment_exists(comment_id):
+        abort(404)
+
+    data = request.get_json(silent=True) or {}
+    value = data.get("value")
+    if value not in (1, -1):
+        abort(400)
+
+    try:
+        score = mangadb.vote_comment(comment_id, voter_hash(), value)
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "already_voted"}), 409
+
+    return jsonify({"score": score})
+
+
 # ---------- auto-deploy (webhook do GitHub) ----------
 
 def verify_github_signature(payload_body, signature_header):
@@ -387,37 +445,6 @@ def deploy():
         return "error", 500
 
     return "ok", 200
-
-
-# ---------- webhook do Cusdis (fila de aprovação automática de comentários) ----------
-
-@app.route("/webhooks/cusdis/<secret>", methods=["POST"])
-@csrf.exempt
-@limiter.limit("30 per minute")
-def cusdis_webhook(secret):
-    """O Cusdis não assina o payload do webhook, então o segredo na própria URL
-    é a única barreira contra POST forjado - abort(404) em vez de 403 pra não
-    confirmar pra quem tentar adivinhar que essa rota existe."""
-    if not CUSDIS_WEBHOOK_SECRET or not hmac.compare_digest(secret, CUSDIS_WEBHOOK_SECRET):
-        abort(404)
-
-    payload = request.get_json(silent=True) or {}
-    if payload.get("type") != "new_comment":
-        return "ignored", 200
-
-    data = payload.get("data") or {}
-    approve_link = data.get("approve_link")
-    if not approve_link:
-        return "ignored", 200
-
-    mangadb.add_pending_approval(
-        approve_link=approve_link,
-        nickname=data.get("by_nickname"),
-        content=data.get("content"),
-        page_title=data.get("page_title"),
-    )
-    return "ok", 200
-
 
 # ---------- autenticação do admin ----------
 
@@ -642,17 +669,17 @@ def migration_commit():
     abort(400)
 
 
-@app.route("/admin/comments/pending-approvals", methods=["GET"])
+@app.route("/admin/comments", methods=["GET"])
 @login_required
-def pending_approvals():
-    return jsonify({"items": mangadb.get_pending_approvals()})
+def admin_comments():
+    return render_template("admin_comments.html", comments=mangadb.get_all_comments_admin())
 
 
-@app.route("/admin/comments/pending-approvals/<int:approval_id>/done", methods=["POST"])
+@app.route("/admin/comments/<int:comment_id>/delete", methods=["POST"])
 @login_required
-def pending_approval_done(approval_id):
-    mangadb.delete_pending_approval(approval_id)
-    return jsonify({"ok": True})
+def delete_comment_route(comment_id):
+    mangadb.delete_comment(comment_id)
+    return redirect(url_for("admin_comments"))
 
 
 @app.route("/admin/mangas/<manga_id>/status", methods=["POST"])

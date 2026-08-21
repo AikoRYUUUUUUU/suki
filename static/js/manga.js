@@ -26,7 +26,7 @@ async function renderMangaPage() {
   document.getElementById("stat-status").textContent = manga.status;
 
   setupRateWidget(manga);
-  mountComments(manga);
+  initComments(manga.id);
 
   const sorted = [...manga.chapters].sort((a, b) => a.number - b.number);
   const startBtn = document.getElementById("start-reading");
@@ -104,113 +104,181 @@ function setupRateWidget(manga) {
   });
 }
 
-// Cusdis renderiza o widget num iframe srcdoc (mesma origem da página, não um
-// domínio externo) - por isso dá pra ler/escrever o documento de dentro dele
-// sem esbarrar em bloqueio de cross-origin. Usamos isso pra (1) redimensionar
-// o iframe pro tamanho real do conteúdo, já que ele nasce fixo em 150px de
-// altura (o padrão do navegador pra iframe sem altura definida) e nada no
-// widget deles ajusta isso sozinho, e (2) sobrescrever as classes Tailwind do
-// widget pra combinar com a paleta do site, com !important porque as classes
-// deles (ex. bg-transparent) têm a mesma especificidade que um seletor de
-// elemento puro e venceriam sem isso.
-const CUSDIS_THEME_CSS = `
-  html, body {
-    background: transparent !important;
-    color: #EEE6D3 !important;
-    font-family: 'Zen Kaku Gothic New', 'Inter', sans-serif !important;
+const COMMENT_VOTED_KEY = "suki-voted-comments";
+
+function getVotedComments() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(COMMENT_VOTED_KEY) || "[]"));
+  } catch (e) {
+    return new Set();
   }
-  label { color: #C9C0AA !important; }
-  input, textarea {
-    background: #17151F !important;
-    border: 1px solid rgba(238, 230, 211, .18) !important;
-    color: #EEE6D3 !important;
-    border-radius: 2px !important;
+}
+
+function markCommentVoted(id) {
+  const voted = getVotedComments();
+  voted.add(id);
+  localStorage.setItem(COMMENT_VOTED_KEY, JSON.stringify([...voted]));
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : String(str);
+  return div.innerHTML;
+}
+
+function initComments(mangaId) {
+  const form = document.getElementById("comment-form");
+  if (!form) return;
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    submitComment(form, mangaId, null);
+  });
+
+  loadComments(mangaId);
+}
+
+async function loadComments(mangaId) {
+  const list = document.getElementById("comment-list");
+  if (!list) return;
+  try {
+    const res = await fetch(`/api/mangas/${mangaId}/comments`);
+    const data = await res.json();
+    renderComments(data.comments || [], mangaId);
+  } catch (e) {
+    list.innerHTML = "<p class='empty-state'>Não foi possível carregar os comentários.</p>";
   }
-  input::placeholder, textarea::placeholder { color: #8A8578 !important; }
-  button {
-    background: #B7472A !important;
-    color: #EEE6D3 !important;
-    border: none !important;
-    border-radius: 2px !important;
+}
+
+function renderComments(comments, mangaId) {
+  const list = document.getElementById("comment-list");
+  const voted = getVotedComments();
+
+  if (!comments.length) {
+    list.innerHTML = "<p class='empty-state'>Nenhum comentário ainda. Seja o primeiro a comentar!</p>";
+    return;
   }
-  button:hover { background: #a03d24 !important; }
-  a { color: #C99A3E !important; }
 
-  /* cada comentário (nickname + data + texto + responder) numa box própria -
-     .my-4 é a classe Tailwind que envolve cada item; o :has() restringe pra
-     só os que têm a linha de nickname dentro, pra não pegar outros divs
-     genéricos que por acaso também usem essa classe de espaçamento */
-  .my-4:has(> .flex.items-center) {
-    background: #221F2C !important;
-    border: 1px solid rgba(238, 230, 211, .12) !important;
-    border-radius: 2px !important;
-    padding: 14px 16px !important;
-    margin: 0 0 12px !important;
-  }
-  div.mr-2.font-medium { color: #C99A3E !important; }
-  div.text-gray-500.text-sm { color: #8A8578 !important; }
-`;
+  list.innerHTML = comments.map(c => commentItemHTML(c, voted)).join("");
 
-function mountComments(manga) {
-  const mount = document.getElementById("comments-mount");
-  if (!mount) return;
-  const appId = mount.dataset.cusdisAppId;
-  if (!appId) return;
+  list.querySelectorAll(".comment-vote-btn").forEach(btn => {
+    btn.addEventListener("click", () => castCommentVote(btn));
+  });
 
-  const thread = document.createElement("div");
-  thread.id = "cusdis_thread";
-  thread.dataset.host = "https://cusdis.com";
-  thread.dataset.appId = appId;
-  thread.dataset.pageId = manga.id;
-  thread.dataset.pageUrl = window.location.href;
-  thread.dataset.pageTitle = manga.title;
-  mount.appendChild(thread);
+  list.querySelectorAll(".comment-reply-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const form = list.querySelector(`.comment-reply-form[data-parent-id="${btn.dataset.commentId}"]`);
+      if (form) form.style.display = form.style.display === "none" ? "flex" : "none";
+    });
+  });
 
-  const script = document.createElement("script");
-  script.src = "https://cusdis.com/js/cusdis.es.js";
-  script.async = true;
-  script.defer = true;
-  mount.appendChild(script);
+  list.querySelectorAll(".comment-reply-form").forEach(form => {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      submitComment(form, mangaId, Number(form.dataset.parentId));
+    });
+  });
+}
 
-  function applyThemeAndResize(iframe) {
-    let doc;
-    try {
-      doc = iframe.contentDocument;
-    } catch (e) {
-      return false;
+function commentItemHTML(c, voted, isReply) {
+  const hasVoted = voted.has(c.id);
+  const repliesHTML = (c.replies || []).map(r => commentItemHTML(r, voted, true)).join("");
+  const replyBlock = isReply ? "" : `
+    <button type="button" class="comment-reply-toggle" data-comment-id="${c.id}">Responder</button>
+    <form class="comment-reply-form" data-parent-id="${c.id}" style="display:none;">
+      <textarea name="body" placeholder="Escreva uma resposta..." maxlength="2000" required></textarea>
+      <input type="text" name="author_name" placeholder="Seu nome" maxlength="50" required>
+      <input type="text" name="website" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button type="submit" class="btn btn-ghost">Responder</button>
+      <p class="comment-form-msg"></p>
+    </form>
+  `;
+
+  return `
+    <div class="comment-item${isReply ? " is-reply" : ""}">
+      <div class="comment-vote">
+        <button type="button" class="comment-vote-btn" data-comment-id="${c.id}" data-value="1" ${hasVoted ? "disabled" : ""} aria-label="Votar a favor">▲</button>
+        <span class="comment-score" data-score-for="${c.id}">${c.score}</span>
+        <button type="button" class="comment-vote-btn" data-comment-id="${c.id}" data-value="-1" ${hasVoted ? "disabled" : ""} aria-label="Votar contra">▼</button>
+      </div>
+      <div class="comment-body">
+        <div class="comment-meta">
+          <strong class="comment-author">${escapeHtml(c.author_name)}</strong>
+          <span class="comment-date">${formatDate(c.created_at.slice(0, 10))}</span>
+        </div>
+        <p class="comment-text">${escapeHtml(c.body)}</p>
+        ${replyBlock}
+        ${repliesHTML ? `<div class="comment-replies">${repliesHTML}</div>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+async function submitComment(form, mangaId, parentId) {
+  const authorName = form.author_name.value.trim();
+  const body = form.body.value.trim();
+  const website = form.website ? form.website.value : "";
+  const msgEl = form.querySelector(".comment-form-msg");
+
+  if (!authorName || !body) return;
+
+  const submitBtn = form.querySelector("button[type=submit]");
+  if (submitBtn) submitBtn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/mangas/${mangaId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ author_name: authorName, body, parent_id: parentId, website }),
+    });
+
+    if (res.status === 429) {
+      if (msgEl) msgEl.textContent = "Você está comentando rápido demais. Espere um pouco.";
+      return;
     }
-    if (!doc || !doc.body) return false;
-
-    if (!doc.getElementById("suki-cusdis-theme")) {
-      const style = doc.createElement("style");
-      style.id = "suki-cusdis-theme";
-      style.textContent = CUSDIS_THEME_CSS;
-      doc.head.appendChild(style);
+    if (!res.ok) {
+      if (msgEl) msgEl.textContent = "Não foi possível publicar o comentário.";
+      return;
     }
 
-    const resize = () => { iframe.style.height = doc.documentElement.scrollHeight + "px"; };
-    resize();
-
-    if (!iframe.dataset.sukiObserved) {
-      iframe.dataset.sukiObserved = "1";
-      new MutationObserver(resize).observe(doc.body, { childList: true, subtree: true, characterData: true });
-      new ResizeObserver(resize).observe(doc.body);
-    }
-    return true;
+    form.reset();
+    if (parentId) form.style.display = "none";
+    if (msgEl) msgEl.textContent = "";
+    loadComments(mangaId);
+  } catch (e) {
+    if (msgEl) msgEl.textContent = "Não foi possível publicar o comentário.";
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
   }
+}
 
-  // O iframe do Cusdis é criado de forma assíncrona pelo script deles -
-  // tenta por alguns segundos até ele existir e ter conteúdo.
-  let attempts = 0;
-  const timer = setInterval(() => {
-    attempts++;
-    const iframe = thread.querySelector("iframe");
-    if (iframe && applyThemeAndResize(iframe)) {
-      clearInterval(timer);
-    } else if (attempts > 40) {
-      clearInterval(timer);
+async function castCommentVote(btn) {
+  const commentId = Number(btn.dataset.commentId);
+  const value = Number(btn.dataset.value);
+  const pair = btn.parentElement.querySelectorAll(".comment-vote-btn");
+
+  try {
+    const res = await fetch(`/api/comments/${commentId}/vote`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value }),
+    });
+
+    if (res.status === 409) {
+      markCommentVoted(commentId);
+      pair.forEach(b => { b.disabled = true; });
+      return;
     }
-  }, 250);
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const scoreEl = btn.parentElement.querySelector(`[data-score-for="${commentId}"]`);
+    if (scoreEl) scoreEl.textContent = data.score;
+    markCommentVoted(commentId);
+    pair.forEach(b => { b.disabled = true; });
+  } catch (e) {
+    // silencioso - voto não é uma ação crítica
+  }
 }
 
 function formatDate(iso) {

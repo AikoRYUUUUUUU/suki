@@ -27,6 +27,7 @@
       <h1>Mangás</h1>
     </div>
     <div style="display:flex; gap:10px;">
+      <a class="btn btn-ghost" href="{{ url_for('admin_comments') }}">Comentários</a>
       <a class="btn btn-primary" href="{{ url_for('new_manga_form') }}">Adicionar mangá</a>
       <form action="{{ url_for('logout') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -110,7 +111,6 @@
 <script src="{{ url_for('static', filename='js/admin_uploads.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin_confirm_delete.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin_migration.js') }}"></script>
-<script src="{{ url_for('static', filename='js/admin_comment_approvals.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin_dashboard.js') }}"></script>
 </body>
 </html>

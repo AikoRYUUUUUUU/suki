@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Comentários — Suki</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='assets/logo.svg') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <a href="/" class="brand"><img class="stamp" src="{{ url_for('static', filename='assets/logo.svg') }}" alt=""><img class="wordmark" src="{{ url_for('static', filename='assets/wordmark.svg') }}" alt="Suki"></a>
+    <nav class="nav-links">
+      <a href="{{ url_for('admin') }}">← Painel</a>
+    </nav>
+  </div>
+</header>
+
+<div class="admin-shell wide">
+  <div class="admin-header">
+    <div>
+      <p class="eyebrow">Moderação</p>
+      <h1>Comentários</h1>
+      <p class="admin-hint">Publicados na hora, sem aprovação prévia — exclua aqui o que for indesejado.</p>
+    </div>
+  </div>
+
+  <div class="admin-card" style="padding:0 28px;">
+    {% if comments %}
+      <div class="manga-list">
+        {% for c in comments %}
+          <div class="manga-list-row">
+            <div class="info">
+              <h3>{{ c.body }}</h3>
+              <p class="meta">
+                {{ c.author_name }} · <a href="{{ url_for('manga_page', id=c.manga_id) }}">{{ c.manga_title }}</a>
+                · {{ c.created_at[:10] }} · score {{ c.score }}
+                {% if c.parent_id %}· resposta a #{{ c.parent_id }}{% endif %}
+              </p>
+            </div>
+            <div class="actions">
+              <button type="button" class="btn btn-danger js-delete-trigger"
+                      data-target-form="delete-comment-{{ c.id }}"
+                      data-name="comentário de {{ c.author_name }}"
+                      data-detail="{{ 'e todas as respostas a ele' if not c.parent_id else '' }}">Excluir</button>
+              <form id="delete-comment-{{ c.id }}" action="{{ url_for('delete_comment_route', comment_id=c.id) }}" method="post" style="display:none;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="empty-state">Nenhum comentário ainda.</p>
+    {% endif %}
+  </div>
+</div>
+
+<dialog id="confirm-delete-dialog" class="confirm-dialog">
+  <p class="confirm-dialog-title">Excluir "<span id="confirm-delete-name"></span>"?</p>
+  <p class="confirm-dialog-detail" id="confirm-delete-detail"></p>
+  <p class="admin-hint">Essa ação não pode ser desfeita.</p>
+  <div class="admin-actions">
+    <button type="button" id="confirm-delete-btn" class="btn btn-danger-solid">Excluir</button>
+    <button type="button" id="confirm-delete-cancel" class="btn btn-ghost">Cancelar</button>
+  </div>
+</dialog>
+
+<script src="{{ url_for('static', filename='js/admin_confirm_delete.js') }}"></script>
+</body>
+</html>

@@ -64,23 +64,35 @@ CREATE TABLE IF NOT EXISTS votes (
     PRIMARY KEY (manga_id, voter_hash)
 );
 
--- Fila de aprovação automática de comentários do Cusdis: o webhook deles chega
--- aqui (entrada, sem custo de saída bloqueada pelo free-tier), fica guardado
--- até o navegador do admin (a próxima vez que o painel carregar) buscar essa
--- fila e clicar o approve_link de cada um sozinho.
-CREATE TABLE IF NOT EXISTS pending_comment_approvals (
+-- Comentários nativos (sem aprovação manual - publica na hora, admin só apaga
+-- o que for indesejado). parent_id nulo = comentário raiz; uma resposta a uma
+-- resposta é achatada pro nível 1 em mangadb.add_comment, então na prática a
+-- árvore nunca passa de 2 níveis mesmo sem constraint aqui.
+CREATE TABLE IF NOT EXISTS comments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    approve_link TEXT NOT NULL UNIQUE,
-    nickname TEXT,
-    content TEXT,
-    page_title TEXT,
-    created_at TEXT NOT NULL
+    manga_id TEXT NOT NULL REFERENCES mangas(id) ON DELETE CASCADE,
+    parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
+    author_name TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    score INTEGER NOT NULL DEFAULT 0
+);
+
+-- Mesmo princípio de `votes`: chave composta (comment_id, voter_hash) barra
+-- voto duplicado sem precisar de conta.
+CREATE TABLE IF NOT EXISTS comment_votes (
+    comment_id INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+    voter_hash TEXT NOT NULL,
+    value INTEGER NOT NULL,
+    PRIMARY KEY (comment_id, voter_hash)
 );
 
 CREATE INDEX IF NOT EXISTS idx_chapters_manga ON chapters(manga_id);
 CREATE INDEX IF NOT EXISTS idx_pages_chapter ON pages(chapter_id);
 CREATE INDEX IF NOT EXISTS idx_manga_tags_manga ON manga_tags(manga_id);
 CREATE INDEX IF NOT EXISTS idx_manga_tags_tag ON manga_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_comments_manga ON comments(manga_id);
+CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_id);
 
 -- índices de expressão: get_or_create_tag/get_or_create_author buscam por
 -- lower(name), que não usa o índice UNIQUE comum de `name` (esse é sobre a
