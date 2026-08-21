@@ -11,6 +11,8 @@ from datetime import date
 from functools import wraps
 from pathlib import Path
 
+import nacl.exceptions
+import nacl.signing
 from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
@@ -36,6 +38,8 @@ GOOGLE_SITE_VERIFICATION = os.environ.get("GOOGLE_SITE_VERIFICATION")
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
 DISCORD_GUILD_ID = os.environ.get("DISCORD_GUILD_ID")
+DISCORD_PUBLIC_KEY = os.environ.get("DISCORD_PUBLIC_KEY")
+DISCORD_ROLES_CHANNEL_ID = os.environ.get("DISCORD_ROLES_CHANNEL_ID")
 
 SITE_DESCRIPTION = "Leia mangás e webtoons traduzidos em português, de graça e sem enrolação. Catálogo atualizado toda semana."
 
@@ -107,26 +111,36 @@ def notify_discord(title, url, description, cover, role_id=None):
         print(f"[discord webhook] falhou: {e}")
 
 
+def discord_api(method, path, body=None):
+    """Chamada crua na API REST do Discord, autenticada como bot. Sem
+    User-Agent descritivo o Cloudflare na frente do discord.com barra o
+    request (parece automação) com erro 403."""
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    req = urllib.request.Request(
+        f"https://discord.com/api/v10{path}", data=data, method=method,
+        headers={
+            "Authorization": f"Bot {DISCORD_BOT_TOKEN}",
+            "Content-Type": "application/json",
+            "User-Agent": "SukiBot (https://sukimangas.pythonanywhere.com, 1.0)",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        raw = resp.read()
+        return json.loads(raw) if raw else None
+
+
 def create_discord_role(title):
     """Cria direto na API do Discord o cargo de 'seguir esse mangá' e devolve o
     ID. Best-effort - sem token configurado ou com o Discord fora do ar, o
     mangá é criado normalmente sem cargo."""
     if not DISCORD_BOT_TOKEN or not DISCORD_GUILD_ID:
         return None
-    body = json.dumps({"name": title[:100], "mentionable": True, "hoist": False}).encode("utf-8")
-    req = urllib.request.Request(
-        f"https://discord.com/api/v10/guilds/{DISCORD_GUILD_ID}/roles", data=body, method="POST",
-        headers={
-            "Authorization": f"Bot {DISCORD_BOT_TOKEN}",
-            "Content-Type": "application/json",
-            # Sem isso o Cloudflare na frente do discord.com barra o request
-            # (User-Agent genérico do urllib parece automação) com erro 403.
-            "User-Agent": "SukiBot (https://sukimangas.pythonanywhere.com, 1.0)",
-        },
-    )
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read()).get("id")
+        role = discord_api(
+            "POST", f"/guilds/{DISCORD_GUILD_ID}/roles",
+            {"name": title[:100], "mentionable": True, "hoist": False},
+        )
+        return role.get("id")
     except Exception as e:
         print(f"[discord] criação de cargo falhou: {e}")
         return None
@@ -491,6 +505,7 @@ def admin():
         statuses=mangadb.MANGA_STATUSES,
         migration_pending_count=migration_pending_count,
         discord_roles_pending_count=len(discord_roles_pending),
+        discord_roles_announce_ready=bool(DISCORD_BOT_TOKEN and DISCORD_ROLES_CHANNEL_ID),
     )
 
 
@@ -504,6 +519,97 @@ def backfill_discord_roles():
         if role_id:
             mangadb.set_manga_discord_role(manga["id"], role_id)
     return redirect(url_for("admin"))
+
+
+@app.route("/admin/discord-roles/announce", methods=["POST"])
+@login_required
+def announce_discord_roles():
+    """Manda no canal configurado uma mensagem por lote de até 25 mangás (5
+    linhas de 5 botões), cada botão com o cargo daquele mangá. Clicar liga/
+    desliga o cargo (ver discord_interactions)."""
+    mangas = mangadb.get_mangas_with_discord_role()
+    if not mangas or not DISCORD_BOT_TOKEN or not DISCORD_ROLES_CHANNEL_ID:
+        return redirect(url_for("admin"))
+
+    batches = [mangas[i:i + 25] for i in range(0, len(mangas), 25)]
+    for i, batch in enumerate(batches):
+        rows = [
+            {
+                "type": 1,
+                "components": [
+                    {
+                        "type": 2,
+                        "style": 2,
+                        "label": m["title"][:80],
+                        "custom_id": f"role:{m['discord_role_id']}",
+                    }
+                    for m in batch[j:j + 5]
+                ],
+            }
+            for j in range(0, len(batch), 5)
+        ]
+        payload = {"components": rows}
+        if i == 0:
+            payload["embeds"] = [{
+                "title": "📚 Notificações por mangá",
+                "description": (
+                    "Clique no botão do mangá que você quer acompanhar pra receber "
+                    "um aviso aqui sempre que sair capítulo novo. Clique de novo "
+                    "no mesmo botão pra parar de receber."
+                ),
+                "color": 0xB7472A,
+                "image": {"url": default_og_image()},
+                "footer": {"text": "Suki"},
+            }]
+        try:
+            discord_api("POST", f"/channels/{DISCORD_ROLES_CHANNEL_ID}/messages", payload)
+        except Exception as e:
+            print(f"[discord] envio da mensagem de cargos falhou: {e}")
+            break
+
+    return redirect(url_for("admin"))
+
+
+@app.route("/discord/interactions", methods=["POST"])
+@csrf.exempt
+def discord_interactions():
+    """Endpoint público que o Discord chama quando alguém clica num botão de
+    cargo. Autenticidade vem da assinatura Ed25519 (não tem CSRF/login - quem
+    prova que é o Discord é a assinatura), não de sessão/CSRF."""
+    signature = request.headers.get("X-Signature-Ed25519", "")
+    timestamp = request.headers.get("X-Signature-Timestamp", "")
+    body = request.get_data()
+    try:
+        verify_key = nacl.signing.VerifyKey(bytes.fromhex(DISCORD_PUBLIC_KEY))
+        verify_key.verify(timestamp.encode("utf-8") + body, bytes.fromhex(signature))
+    except (nacl.exceptions.BadSignatureError, ValueError, TypeError):
+        abort(401)
+
+    data = request.get_json(silent=True) or {}
+
+    if data.get("type") == 1:  # PING de verificação do endpoint
+        return jsonify({"type": 1})
+
+    if data.get("type") == 3:  # clique num botão
+        custom_id = data.get("data", {}).get("custom_id", "")
+        if custom_id.startswith("role:"):
+            role_id = custom_id[len("role:"):]
+            member = data.get("member") or {}
+            user_id = member.get("user", {}).get("id")
+            has_role = role_id in (member.get("roles") or [])
+            try:
+                if has_role:
+                    discord_api("DELETE", f"/guilds/{DISCORD_GUILD_ID}/members/{user_id}/roles/{role_id}")
+                    content = "❌ Você não vai mais receber avisos desse mangá."
+                else:
+                    discord_api("PUT", f"/guilds/{DISCORD_GUILD_ID}/members/{user_id}/roles/{role_id}")
+                    content = "✅ Você vai receber avisos de capítulo novo desse mangá!"
+            except Exception as e:
+                print(f"[discord] toggle de cargo falhou: {e}")
+                content = "Deu ruim aqui, tenta de novo daqui a pouco."
+            return jsonify({"type": 4, "data": {"content": content, "flags": 64}})
+
+    return jsonify({"type": 4, "data": {"content": "Interação não reconhecida.", "flags": 64}})
 
 
 @app.route("/admin/uploads/presign", methods=["POST"])

@@ -49,18 +49,32 @@
     </div>
   {% endif %}
 
-  {% if discord_roles_pending_count %}
+  {% if discord_roles_pending_count or discord_roles_announce_ready %}
     <div class="admin-card migration-card">
       <div class="migration-header">
         <div>
           <p class="eyebrow">Discord</p>
-          <h2>Cargos pendentes</h2>
-          <p class="admin-hint">{{ discord_roles_pending_count }} mangá{{ 's' if discord_roles_pending_count != 1 else '' }} ainda sem cargo de notificação no Discord.</p>
+          <h2>Cargos de notificação</h2>
+          {% if discord_roles_pending_count %}
+            <p class="admin-hint">{{ discord_roles_pending_count }} mangá{{ 's' if discord_roles_pending_count != 1 else '' }} ainda sem cargo no Discord.</p>
+          {% else %}
+            <p class="admin-hint">Todos os mangás já têm cargo no Discord.</p>
+          {% endif %}
         </div>
-        <form action="{{ url_for('backfill_discord_roles') }}" method="post">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-primary">Criar cargos pendentes</button>
-        </form>
+        <div style="display:flex; gap:10px;">
+          {% if discord_roles_pending_count %}
+            <form action="{{ url_for('backfill_discord_roles') }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-primary">Criar cargos pendentes</button>
+            </form>
+          {% endif %}
+          {% if discord_roles_announce_ready %}
+            <form id="discord-announce-form" action="{{ url_for('announce_discord_roles') }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-ghost">Enviar mensagem de cargos</button>
+            </form>
+          {% endif %}
+        </div>
       </div>
     </div>
   {% endif %}
