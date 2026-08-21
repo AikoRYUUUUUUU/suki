@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS mangas (
     cover TEXT,
     synopsis TEXT NOT NULL,
     rating_sum REAL NOT NULL DEFAULT 0,
-    rating_count INTEGER NOT NULL DEFAULT 0
+    rating_count INTEGER NOT NULL DEFAULT 0,
+    discord_role_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS manga_tags (

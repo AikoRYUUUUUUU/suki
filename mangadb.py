@@ -42,6 +42,7 @@ def init_db():
     _migrate_pages_size_bytes(conn)
     _migrate_mangas_rating_votes(conn)
     _migrate_remove_hentai_tag(conn)
+    _migrate_mangas_discord_role(conn)
     conn.commit()
     conn.close()
 
@@ -72,6 +73,14 @@ def _migrate_remove_hentai_tag(conn):
     tenha sido criada/associada. `ON DELETE CASCADE` em manga_tags.tag_id
     limpa as associações junto."""
     conn.execute("DELETE FROM tags WHERE lower(name) = 'hentai'")
+
+
+def _migrate_mangas_discord_role(conn):
+    """Cargo do Discord criado pelo bot pra esse mangá (leitor segue só as séries
+    que quiser) - coluna nova numa tabela `mangas` já existente."""
+    columns = [row["name"] for row in conn.execute("PRAGMA table_info(mangas)")]
+    if "discord_role_id" not in columns:
+        conn.execute("ALTER TABLE mangas ADD COLUMN discord_role_id TEXT")
 
 
 def slugify(text):
@@ -447,6 +456,20 @@ def get_manga_cover(manga_id):
 def update_manga_cover(manga_id, cover_path):
     conn = get_connection()
     conn.execute("UPDATE mangas SET cover = ? WHERE id = ?", (cover_path, manga_id))
+    conn.commit()
+    conn.close()
+
+
+def get_manga_discord_role(manga_id):
+    conn = get_connection()
+    row = conn.execute("SELECT discord_role_id FROM mangas WHERE id = ?", (manga_id,)).fetchone()
+    conn.close()
+    return row["discord_role_id"] if row else None
+
+
+def set_manga_discord_role(manga_id, role_id):
+    conn = get_connection()
+    conn.execute("UPDATE mangas SET discord_role_id = ? WHERE id = ?", (role_id, manga_id))
     conn.commit()
     conn.close()
 

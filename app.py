@@ -36,6 +36,8 @@ CUSDIS_APP_ID = os.environ.get("CUSDIS_APP_ID")
 CUSDIS_WEBHOOK_SECRET = os.environ.get("CUSDIS_WEBHOOK_SECRET")
 GOOGLE_SITE_VERIFICATION = os.environ.get("GOOGLE_SITE_VERIFICATION")
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
+BOT_BASE_URL = os.environ.get("BOT_BASE_URL")
+BOT_INTERNAL_SECRET = os.environ.get("BOT_INTERNAL_SECRET")
 
 SITE_DESCRIPTION = "Leia mangás e webtoons traduzidos em português, de graça e sem enrolação. Catálogo atualizado toda semana."
 
@@ -76,7 +78,7 @@ def og_image_url(cover):
     return absolute_url(cover)
 
 
-def notify_discord(title, url, description, cover):
+def notify_discord(title, url, description, cover, role_id=None):
     """Dispara o webhook de anúncio no Discord. Best-effort: sem
     DISCORD_WEBHOOK_URL configurada, ou se o Discord estiver fora do ar, não
     pode derrubar o fluxo de publicação do admin - só loga e segue."""
@@ -90,7 +92,13 @@ def notify_discord(title, url, description, cover):
         "thumbnail": {"url": og_image_url(cover)},
         "footer": {"text": "Suki"},
     }
-    body = json.dumps({"embeds": [embed]}).encode("utf-8")
+    payload = {"embeds": [embed]}
+    if role_id:
+        # Menção só notifica quem tem o cargo se estiver em "content" - dentro do
+        # embed (título/descrição) o Discord não interpreta como menção de verdade.
+        payload["content"] = f"<@&{role_id}>"
+        payload["allowed_mentions"] = {"parse": [], "roles": [role_id]}
+    body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         DISCORD_WEBHOOK_URL, data=body, method="POST",
         headers={"Content-Type": "application/json"},
@@ -99,6 +107,29 @@ def notify_discord(title, url, description, cover):
         urllib.request.urlopen(req, timeout=5)
     except Exception as e:
         print(f"[discord webhook] falhou: {e}")
+
+
+def create_discord_role(manga_id, title):
+    """Pede pro bot (processo separado, conectado ao Discord) criar o cargo de
+    'seguir esse mangá' e devolver o ID. Best-effort - se o bot não estiver
+    configurado ou estiver fora do ar, o mangá é criado normalmente sem cargo
+    (dá pra tentar de novo depois editando o mangá)."""
+    if not BOT_BASE_URL or not BOT_INTERNAL_SECRET:
+        return None
+    body = json.dumps({"manga_id": manga_id, "title": title}).encode("utf-8")
+    req = urllib.request.Request(
+        BOT_BASE_URL.rstrip("/") + "/roles", data=body, method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {BOT_INTERNAL_SECRET}",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read()).get("role_id")
+    except Exception as e:
+        print(f"[discord bot] criação de cargo falhou: {e}")
+        return None
 
 
 CSP = (
@@ -708,6 +739,10 @@ def create_manga():
     except mangadb.ValidationError as e:
         return render_new_manga_error(str(e))
 
+    role_id = create_discord_role(manga_id, request.form.get("title"))
+    if role_id:
+        mangadb.set_manga_discord_role(manga_id, role_id)
+
     notify_discord(
         title=f"📚 Novo mangá: {request.form.get('title')}",
         url=absolute_url(url_for("manga_page")) + f"?id={manga_id}",
@@ -923,6 +958,7 @@ def create_chapter(manga_id):
         url=absolute_url(url_for("reader_page")) + f"?id={manga_id}&ch={chapter_id}",
         description=title,
         cover=mangadb.static_url(mangadb.get_manga_cover(manga_id)),
+        role_id=mangadb.get_manga_discord_role(manga_id),
     )
 
     return redirect(url_for("admin"))
@@ -980,6 +1016,7 @@ def bulk_create_chapter(manga_id):
         url=absolute_url(url_for("reader_page")) + f"?id={manga_id}&ch={chapter_id}",
         description=title,
         cover=mangadb.static_url(mangadb.get_manga_cover(manga_id)),
+        role_id=mangadb.get_manga_discord_role(manga_id),
     )
 
     return jsonify({"ok": True, "chapter_id": chapter_id})
