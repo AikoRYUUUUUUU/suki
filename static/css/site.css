@@ -300,6 +300,9 @@ img { max-width: 100%; display: block; }
 }
 .btn-ghost:hover { border-color: var(--gray); }
 .hero-actions { display: flex; gap: 14px; }
+.favorite-star { color: var(--gray); }
+.favorite-btn.is-favorite { border-color: var(--gold); color: var(--gold); }
+.favorite-btn.is-favorite .favorite-star { color: var(--gold); }
 
 .rate-widget {
   display: flex;
@@ -339,8 +342,7 @@ img { max-width: 100%; display: block; }
 .shelf {
   padding: 64px 0;
 }
-#continuar { padding-bottom: 0; }
-#lancamentos.tight-top { padding-top: 28px; }
+.shelf-compact { padding: 32px 0; }
 .empty-state {
   color: var(--gray);
   padding: 32px 4px;
@@ -577,6 +579,31 @@ footer.site-footer a:hover { color: var(--paper); }
 .tag-filter .tag-picker {
   padding: 4px 18px 20px;
 }
+
+.search-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 18px;
+}
+.search-sort-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--gray);
+}
+.search-sort-label select {
+  background: var(--ink-soft);
+  border: 1px solid var(--line);
+  color: var(--paper);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.search-sort-label select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 .manga-synopsis {
   color: var(--paper-dim);

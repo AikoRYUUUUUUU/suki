@@ -57,6 +57,35 @@ function daysSinceRelease(iso) {
   return Math.floor((today - released) / 86400000);
 }
 
+function formatDate(iso) {
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function getRecentUpdates(mangas, limit) {
+  const updates = [];
+  mangas.forEach(m => {
+    m.chapters.forEach(c => {
+      updates.push({ manga: m, chapter: c });
+    });
+  });
+  updates.sort((a, b) => {
+    const byDate = b.chapter.releaseDate.localeCompare(a.chapter.releaseDate);
+    return byDate !== 0 ? byDate : b.chapter.number - a.chapter.number;
+  });
+  return updates.slice(0, limit || 12);
+}
+
+function getRelatedMangas(mangas, manga, limit) {
+  const genres = new Set(manga.genres || []);
+  return mangas
+    .map(m => ({ m, overlap: (m.genres || []).filter(g => genres.has(g)).length }))
+    .filter(x => x.m.id !== manga.id && x.overlap > 0)
+    .sort((a, b) => b.overlap - a.overlap || (b.m.rating || 0) - (a.m.rating || 0))
+    .slice(0, limit || 6)
+    .map(x => x.m);
+}
+
 function mangaCardHTML(m) {
   const latest = getLatestChapter(m);
   const isNew = latest && daysSinceRelease(latest.releaseDate) <= 3;

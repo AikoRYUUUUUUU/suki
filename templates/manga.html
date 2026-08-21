@@ -67,6 +67,10 @@
 
       <div class="hero-actions">
         <a class="btn btn-primary" id="start-reading">Começar a ler</a>
+        <button type="button" class="btn btn-ghost favorite-btn" id="favorite-btn" aria-pressed="false">
+          <span class="favorite-star" aria-hidden="true">★</span>
+          <span id="favorite-btn-label">Favoritar</span>
+        </button>
       </div>
 
       <div class="rate-widget" id="rate-widget">
@@ -89,6 +93,14 @@
     <p class="eyebrow">Sumário</p>
     <h2 class="section-title">Capítulos</h2>
     <div class="chapter-list" id="chapter-list"></div>
+  </div>
+</section>
+
+<section class="shelf shelf-compact" id="related" style="display:none;">
+  <div class="wrap">
+    <p class="eyebrow">Recomendados</p>
+    <h2 class="section-title">Você também pode gostar</h2>
+    <div class="grid-covers" id="grid-related"></div>
   </div>
 </section>
 
@@ -116,6 +128,7 @@
 <script src="{{ url_for('static', filename='js/nav.js') }}"></script>
 <script src="{{ url_for('static', filename='js/data.js') }}"></script>
 <script src="{{ url_for('static', filename='js/history.js') }}"></script>
+<script src="{{ url_for('static', filename='js/favorites.js') }}"></script>
 <script src="{{ url_for('static', filename='js/manga.js') }}"></script>
 </body>
 </html>

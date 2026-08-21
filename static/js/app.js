@@ -33,7 +33,46 @@ function renderContinueReading(mangas) {
 
   document.getElementById("grid-continue").innerHTML = entries.map(e => continueCardHTML(e)).join("");
   document.getElementById("continuar").style.display = "";
-  document.getElementById("lancamentos").classList.add("tight-top");
+}
+
+function favoriteCardHTML(entry) {
+  return `
+    <a class="card-manga" href="manga.html?id=${entry.id}">
+      <div class="cover-frame">
+        <img src="${entry.cover}" alt="Capa de ${entry.title}" loading="lazy">
+      </div>
+      <h3>${entry.title}</h3>
+    </a>
+  `;
+}
+
+function renderFavorites(mangas) {
+  const mangaIds = new Set(mangas.map(m => m.id));
+  const entries = getFavoritesList().filter(e => mangaIds.has(e.id));
+  if (!entries.length) return;
+
+  document.getElementById("grid-favorites").innerHTML = entries.map(favoriteCardHTML).join("");
+  document.getElementById("favoritos").style.display = "";
+}
+
+function updateCardHTML({ manga, chapter }) {
+  return `
+    <a class="card-manga" href="reader.html?id=${manga.id}&ch=${chapter.id}">
+      <div class="cover-frame">
+        <img src="${manga.cover}" alt="Capa de ${manga.title}" loading="lazy">
+      </div>
+      <h3>${manga.title}</h3>
+      <p class="meta">Cap. ${chapter.number} · ${formatDate(chapter.releaseDate)}</p>
+    </a>
+  `;
+}
+
+function renderUpdates(mangas) {
+  const updates = getRecentUpdates(mangas, 12);
+  if (!updates.length) return;
+
+  document.getElementById("grid-updates").innerHTML = updates.map(updateCardHTML).join("");
+  document.getElementById("lancamentos").style.display = "";
 }
 
 function renderHeroManga(manga) {
@@ -82,6 +121,8 @@ async function renderHome() {
 
   renderGrid(mangas);
   renderContinueReading(mangas);
+  renderFavorites(mangas);
+  renderUpdates(mangas);
   startHeroRotation(mangas);
 }
 

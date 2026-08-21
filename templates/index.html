@@ -77,7 +77,7 @@
   </div>
 </section>
 
-<section class="shelf" id="continuar" style="display:none;">
+<section class="shelf shelf-compact" id="continuar" style="display:none;">
   <div class="wrap">
     <p class="eyebrow">Continuar lendo</p>
     <h2 class="section-title">De onde você parou</h2>
@@ -86,7 +86,25 @@
   </div>
 </section>
 
-<section class="shelf" id="lancamentos">
+<section class="shelf shelf-compact" id="favoritos" style="display:none;">
+  <div class="wrap">
+    <p class="eyebrow">Sua lista</p>
+    <h2 class="section-title">Favoritos</h2>
+
+    <div class="grid-covers" id="grid-favorites"></div>
+  </div>
+</section>
+
+<section class="shelf shelf-compact" id="lancamentos" style="display:none;">
+  <div class="wrap">
+    <p class="eyebrow">Atualizações</p>
+    <h2 class="section-title">Lançamentos recentes</h2>
+
+    <div class="grid-covers" id="grid-updates"></div>
+  </div>
+</section>
+
+<section class="shelf shelf-compact" id="catalogo">
   <div class="wrap">
     <p class="eyebrow">Biblioteca</p>
     <h2 class="section-title">Todos os títulos</h2>
@@ -102,6 +120,7 @@
 <script src="{{ url_for('static', filename='js/nav.js') }}"></script>
 <script src="{{ url_for('static', filename='js/data.js') }}"></script>
 <script src="{{ url_for('static', filename='js/history.js') }}"></script>
+<script src="{{ url_for('static', filename='js/favorites.js') }}"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

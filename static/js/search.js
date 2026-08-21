@@ -36,8 +36,22 @@ function selectedTags() {
   ).map(el => el.value);
 }
 
-function renderResults(mangas, q, status, tags) {
-  const filtered = mangas.filter(m => matchesSearch(m, q, status, tags));
+function sortMangas(mangas, sort) {
+  const sorted = [...mangas];
+  if (sort === "rating") return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  if (sort === "az") return sorted.sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
+  return sorted.sort((a, b) => {
+    const la = getLatestChapter(a);
+    const lb = getLatestChapter(b);
+    if (!la && !lb) return 0;
+    if (!la) return 1;
+    if (!lb) return -1;
+    return lb.releaseDate.localeCompare(la.releaseDate);
+  });
+}
+
+function renderResults(mangas, q, status, tags, sort) {
+  const filtered = sortMangas(mangas.filter(m => matchesSearch(m, q, status, tags)), sort);
   document.getElementById("grid-covers").innerHTML = filtered.map(mangaCardHTML).join("");
   document.getElementById("search-empty").hidden = filtered.length > 0;
   document.getElementById("search-title").textContent = describeFilters(q, status, tags);
@@ -48,13 +62,15 @@ async function renderSearchPage() {
   const searchInput = document.getElementById("search-input");
   const searchStatus = document.getElementById("search-status");
   const tagFilter = document.getElementById("tag-filter");
+  const searchSort = document.getElementById("search-sort");
 
   const applyFilters = () =>
-    renderResults(mangas, searchInput.value.trim(), searchStatus.value, selectedTags());
+    renderResults(mangas, searchInput.value.trim(), searchStatus.value, selectedTags(), searchSort.value);
 
   searchInput.addEventListener("input", applyFilters);
   searchStatus.addEventListener("change", applyFilters);
   tagFilter.addEventListener("change", applyFilters);
+  searchSort.addEventListener("change", applyFilters);
   if (selectedTags().length || location.hash === "#tag-filter") tagFilter.open = true;
   applyFilters();
 }

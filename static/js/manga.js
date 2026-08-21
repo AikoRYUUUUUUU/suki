@@ -26,7 +26,9 @@ async function renderMangaPage() {
   document.getElementById("stat-status").textContent = manga.status;
 
   setupRateWidget(manga);
+  setupFavoriteButton(manga);
   initComments(manga.id);
+  renderRelated(manga);
 
   const sorted = [...manga.chapters].sort((a, b) => a.number - b.number);
   const startBtn = document.getElementById("start-reading");
@@ -59,6 +61,32 @@ async function renderMangaPage() {
         <span class="ch-date">${formatDate(c.releaseDate)}</span>
       </a>
     `).join("");
+}
+
+function setupFavoriteButton(manga) {
+  const btn = document.getElementById("favorite-btn");
+  const label = document.getElementById("favorite-btn-label");
+
+  function paint(active) {
+    btn.classList.toggle("is-favorite", active);
+    btn.setAttribute("aria-pressed", String(active));
+    label.textContent = active ? "Favoritado" : "Favoritar";
+  }
+
+  paint(isFavorite(manga.id));
+
+  btn.addEventListener("click", () => {
+    paint(toggleFavorite(manga));
+  });
+}
+
+async function renderRelated(manga) {
+  const allMangas = await getAllMangas();
+  const related = getRelatedMangas(allMangas, manga, 6);
+  if (!related.length) return;
+
+  document.getElementById("grid-related").innerHTML = related.map(mangaCardHTML).join("");
+  document.getElementById("related").style.display = "";
 }
 
 function setupRateWidget(manga) {
@@ -288,11 +316,6 @@ async function castCommentVote(btn) {
   } catch (e) {
     // silencioso - voto não é uma ação crítica
   }
-}
-
-function formatDate(iso) {
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 renderMangaPage();
