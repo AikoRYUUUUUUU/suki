@@ -488,9 +488,18 @@ def get_mangas_without_discord_role():
 
 def get_mangas_with_discord_role():
     conn = get_connection()
-    rows = [dict(r) for r in conn.execute(
-        "SELECT title, discord_role_id FROM mangas WHERE discord_role_id IS NOT NULL ORDER BY title"
-    )]
+    placeholders = ",".join("?" * len(SENSITIVE_TAGS))
+    rows = [dict(r) for r in conn.execute(f"""
+        SELECT m.title, m.discord_role_id,
+            EXISTS(
+                SELECT 1 FROM manga_tags mt
+                JOIN tags t ON t.id = mt.tag_id
+                WHERE mt.manga_id = m.id AND t.name IN ({placeholders})
+            ) AS is_sensitive
+        FROM mangas m
+        WHERE m.discord_role_id IS NOT NULL
+        ORDER BY m.title
+    """, tuple(SENSITIVE_TAGS))]
     conn.close()
     return rows
 

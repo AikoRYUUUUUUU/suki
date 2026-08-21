@@ -531,6 +531,10 @@ def announce_discord_roles():
     if not mangas or not DISCORD_BOT_TOKEN or not DISCORD_ROLES_CHANNEL_ID:
         return redirect(url_for("admin"))
 
+    def button_label(m):
+        label = ("🔞 " if m["is_sensitive"] else "") + m["title"]
+        return label[:80]
+
     batches = [mangas[i:i + 25] for i in range(0, len(mangas), 25)]
     for i, batch in enumerate(batches):
         rows = [
@@ -540,7 +544,7 @@ def announce_discord_roles():
                     {
                         "type": 2,
                         "style": 2,
-                        "label": m["title"][:80],
+                        "label": button_label(m),
                         "custom_id": f"role:{m['discord_role_id']}",
                     }
                     for m in batch[j:j + 5]
@@ -550,12 +554,18 @@ def announce_discord_roles():
         ]
         payload = {"components": rows}
         if i == 0:
+            catalog_lines = "\n".join(
+                f"🔞 {m['title']}" if m["is_sensitive"] else f"• {m['title']}"
+                for m in mangas  # já vem em ordem alfabética de get_mangas_with_discord_role
+            )
+            sensitive_note = "\n\n🔞 = conteúdo sensível (+18)" if any(m["is_sensitive"] for m in mangas) else ""
             payload["embeds"] = [{
                 "title": "📚 Notificações por mangá",
                 "description": (
                     "Clique no botão do mangá que você quer acompanhar pra receber "
                     "um aviso aqui sempre que sair capítulo novo. Clique de novo "
-                    "no mesmo botão pra parar de receber."
+                    "no mesmo botão pra parar de receber.\n\n"
+                    f"{catalog_lines}{sensitive_note}"
                 ),
                 "color": 0xB7472A,
                 "image": {"url": default_og_image()},
