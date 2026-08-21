@@ -27,7 +27,7 @@
 <header class="topbar">
   <div class="wrap">
     <a href="/" class="brand"><img class="stamp" src="{{ url_for('static', filename='assets/logo.svg') }}" alt=""><img class="wordmark" src="{{ url_for('static', filename='assets/wordmark.svg') }}" alt="Suki"></a>
-    <form class="topbar-search" role="search" action="{{ url_for('search_page') }}" method="get">
+    <form class="topbar-search" role="search" action="{{ url_for('search_page') }}" method="get" id="topbar-search">
       <button type="submit" class="search-icon-btn" aria-label="Buscar">
         <svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true">
           <path d="M13.61 12.2h-.7l-.25-.24a5.8 5.8 0 1 0-.62.62l.24.25v.7l4.46 4.45 1.33-1.33-4.46-4.45zm-5.35 0a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/>
@@ -41,6 +41,11 @@
         {% endfor %}
       </select>
     </form>
+    <button type="button" class="search-toggle" id="search-toggle" aria-label="Buscar" aria-expanded="false" aria-controls="topbar-search">
+      <svg viewBox="0 0 20 20" aria-hidden="true">
+        <path d="M13.61 12.2h-.7l-.25-.24a5.8 5.8 0 1 0-.62.62l.24.25v.7l4.46 4.45 1.33-1.33-4.46-4.45zm-5.35 0a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/>
+      </svg>
+    </button>
     <nav class="nav-links" id="nav-links">
       <a href="{{ url_for('search_page') }}">Biblioteca</a>
       <a href="/#lancamentos">Lançamentos</a>

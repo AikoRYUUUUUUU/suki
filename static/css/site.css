@@ -110,8 +110,8 @@ img { max-width: 100%; display: block; }
   justify-content: center;
   align-items: center;
   gap: 4px;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   background: transparent;
   border: 1px solid var(--line);
@@ -125,6 +125,24 @@ img { max-width: 100%; display: block; }
   height: 1.5px;
   background: var(--paper-dim);
 }
+
+/* botões só existem em telas estreitas (nav-toggle/search-toggle) - 40px em
+   vez dos 34px do icon-btn "normal" porque aqui é alvo de toque, não de mouse */
+.search-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.search-toggle svg { width: 16px; height: 16px; fill: var(--paper-dim); }
+.search-toggle:hover svg { fill: var(--paper); }
 
 .topbar-search {
   display: flex;
@@ -974,13 +992,31 @@ body.reader-body {
     border-top: 1px solid var(--line);
   }
   .nav-links a:first-child { border-top: none; }
-  .topbar-search { max-width: none; }
+  .search-toggle { display: flex; }
+  .topbar-search {
+    display: none;
+    position: absolute;
+    top: 68px;
+    left: 0;
+    right: 0;
+    max-width: none;
+    margin: 0;
+    padding: 0 16px;
+    height: 56px;
+    background: var(--ink-soft);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar-search.is-active { display: flex; }
   .topbar-search select { display: none; }
 
   .wrap { padding: 0 16px; }
-  .topbar .wrap { gap: 14px; }
-  .brand .wordmark { height: 26px; }
-  .brand .stamp { width: 22px; height: 22px; }
+  .topbar .wrap { gap: 12px; }
+  .brand { gap: 8px; }
+  .brand .wordmark { height: 28px; }
+  .brand .stamp { width: 24px; height: 24px; }
   /* iOS dá zoom automático ao focar input com font-size < 16px */
   .topbar-search input[type="text"] { font-size: 16px; }
 
