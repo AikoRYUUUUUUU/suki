@@ -153,6 +153,26 @@ def create_discord_role(title):
         return None
 
 
+def rename_discord_role(role_id, title):
+    """Best-effort - mantém o nome do cargo em dia com o título do mangá."""
+    if not role_id or not DISCORD_BOT_TOKEN or not DISCORD_GUILD_ID:
+        return
+    try:
+        discord_api("PATCH", f"/guilds/{DISCORD_GUILD_ID}/roles/{role_id}", {"name": title[:100]})
+    except Exception as e:
+        print(f"[discord] renomear cargo falhou: {e}")
+
+
+def delete_discord_role(role_id):
+    """Best-effort - evita cargo órfão no Discord quando o mangá é apagado."""
+    if not role_id or not DISCORD_BOT_TOKEN or not DISCORD_GUILD_ID:
+        return
+    try:
+        discord_api("DELETE", f"/guilds/{DISCORD_GUILD_ID}/roles/{role_id}")
+    except Exception as e:
+        print(f"[discord] exclusão de cargo falhou: {e}")
+
+
 CSP = (
     "default-src 'self'; "
     "img-src 'self' https://*.r2.dev; "
@@ -629,7 +649,49 @@ def discord_interactions():
                 content = "Deu ruim aqui, tenta de novo daqui a pouco."
             return jsonify({"type": 4, "data": {"content": content, "flags": 64}})
 
+    if data.get("type") == 2:  # slash command
+        return handle_slash_command(data.get("data") or {})
+
     return jsonify({"type": 4, "data": {"content": "Interação não reconhecida.", "flags": 64}})
+
+
+def manga_embed(manga, title=None):
+    return {
+        "title": title or manga["title"],
+        "url": absolute_url(url_for("manga_page")) + f"?id={manga['id']}",
+        "description": truncate_words(manga["synopsis"] or "", 200),
+        "color": 0xB7472A,
+        "thumbnail": {"url": og_image_url(manga["cover"])},
+        "footer": {"text": "Equipe Suki Mangás"},
+    }
+
+
+def handle_slash_command(command):
+    """Respostas sempre com flags:64 (ephemeral) - só quem digitou o comando
+    vê a resposta, o resto do canal não é poluído."""
+    name = command.get("name")
+
+    if name == "procurar":
+        options = {o["name"]: o["value"] for o in command.get("options", [])}
+        query = (options.get("nome") or "").strip()
+        results = mangadb.search_mangas_by_title(query, limit=5) if query else []
+        if not results:
+            return jsonify({"type": 4, "data": {
+                "content": f'Não achei nenhum mangá com "{query}" no catálogo.', "flags": 64,
+            }})
+        return jsonify({"type": 4, "data": {
+            "embeds": [manga_embed(m) for m in results], "flags": 64,
+        }})
+
+    if name == "aleatorio":
+        manga = mangadb.get_random_manga()
+        if not manga:
+            return jsonify({"type": 4, "data": {"content": "O catálogo tá vazio no momento.", "flags": 64}})
+        return jsonify({"type": 4, "data": {
+            "embeds": [manga_embed(manga, title=f"🎲 {manga['title']}")], "flags": 64,
+        }})
+
+    return jsonify({"type": 4, "data": {"content": "Comando não reconhecido.", "flags": 64}})
 
 
 @app.route("/admin/uploads/presign", methods=["POST"])
@@ -972,6 +1034,10 @@ def update_manga(manga_id):
             sensitive_tags=mangadb.SENSITIVE_TAGS, error=str(e),
         ), 400
 
+    new_title = request.form.get("title")
+    if new_title != manga["title"]:
+        rename_discord_role(mangadb.get_manga_discord_role(manga_id), new_title)
+
     return redirect(url_for("admin"))
 
 
@@ -1035,6 +1101,7 @@ def delete_manga_route(manga_id):
 
     pages = mangadb.get_manga_pages_with_paths(manga_id)
     cover = mangadb.get_manga_cover(manga_id)
+    role_id = mangadb.get_manga_discord_role(manga_id)
 
     delete_page_files_if_unshared(pages)
     if cover and not is_r2_url(cover):
@@ -1043,6 +1110,7 @@ def delete_manga_route(manga_id):
             os.remove(cover_full_path)
 
     mangadb.delete_manga(manga_id)
+    delete_discord_role(role_id)
 
     shutil.rmtree(
         os.path.join(app.root_path, "static", "assets", "pages", manga_id),

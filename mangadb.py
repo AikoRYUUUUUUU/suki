@@ -193,6 +193,29 @@ def get_all_manga_ids():
     return rows
 
 
+def search_mangas_by_title(query, limit=5):
+    conn = get_connection()
+    rows = [dict(r) for r in conn.execute(
+        "SELECT id, title, synopsis, cover FROM mangas WHERE title LIKE ? ORDER BY title LIMIT ?",
+        (f"%{query}%", limit),
+    )]
+    conn.close()
+    for row in rows:
+        row["cover"] = static_url(row["cover"])
+    return rows
+
+
+def get_random_manga():
+    conn = get_connection()
+    row = conn.execute("SELECT id, title, synopsis, cover FROM mangas ORDER BY RANDOM() LIMIT 1").fetchone()
+    conn.close()
+    if not row:
+        return None
+    manga = dict(row)
+    manga["cover"] = static_url(manga["cover"])
+    return manga
+
+
 def get_manga_public(manga_id):
     """Dados de um único mangá pra renderização server-side (título, sinopse, capa,
     gêneros...) - usada pra montar <title>/meta/OG antes do JS assumir a página,
