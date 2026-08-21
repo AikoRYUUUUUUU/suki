@@ -554,6 +554,14 @@ def announce_discord_roles():
         ]
         payload = {"components": rows}
         if i == 0:
+            payload["content"] = (
+                "Cada mangá listado abaixo tem um cargo próprio. Clique no botão "
+                "com o nome do mangá pra receber esse cargo e ser marcado aqui "
+                "sempre que sair capítulo novo.\n"
+                "Pra parar de receber, clique de novo no mesmo botão — o cargo "
+                "sai na hora, sem precisar pedir pra ninguém.\n\n"
+                "— Equipe Suki Mangás"
+            )
             catalog_lines = "\n".join(
                 f"🔞 {m['title']}" if m["is_sensitive"] else f"• {m['title']}"
                 for m in mangas  # já vem em ordem alfabética de get_mangas_with_discord_role
@@ -561,12 +569,7 @@ def announce_discord_roles():
             sensitive_note = "\n\n🔞 = conteúdo sensível (+18)" if any(m["is_sensitive"] for m in mangas) else ""
             payload["embeds"] = [{
                 "title": "📚 Notificações por mangá",
-                "description": (
-                    "Clique no botão do mangá que você quer acompanhar pra receber "
-                    "um aviso aqui sempre que sair capítulo novo. Clique de novo "
-                    "no mesmo botão pra parar de receber.\n\n"
-                    f"{catalog_lines}{sensitive_note}"
-                ),
+                "description": f"{catalog_lines}{sensitive_note}",
                 "color": 0xB7472A,
                 "image": {"url": default_og_image()},
                 "footer": {"text": "Suki"},
