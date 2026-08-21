@@ -103,7 +103,12 @@ def notify_discord(title, url, description, cover, role_id=None):
     body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         DISCORD_WEBHOOK_URL, data=body, method="POST",
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            # Mesmo bug do Cloudflare barrando User-Agent genérico do urllib
+            # que já apareceu em discord_api() e no endpoint de interações.
+            "User-Agent": "SukiBot (https://sukimangas.pythonanywhere.com, 1.0)",
+        },
     )
     try:
         urllib.request.urlopen(req, timeout=5)
