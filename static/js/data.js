@@ -63,12 +63,11 @@ function formatDate(iso) {
 }
 
 function getRecentUpdates(mangas, limit) {
-  const updates = [];
-  mangas.forEach(m => {
-    m.chapters.forEach(c => {
-      updates.push({ manga: m, chapter: c });
-    });
-  });
+  // um card por obra - o capítulo mais recente dela, não um card por capítulo
+  const updates = mangas
+    .map(m => ({ manga: m, chapter: getLatestChapter(m) }))
+    .filter(u => u.chapter);
+
   updates.sort((a, b) => {
     const byDate = (b.chapter.releaseDate || "").localeCompare(a.chapter.releaseDate || "");
     return byDate !== 0 ? byDate : b.chapter.number - a.chapter.number;
