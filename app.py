@@ -494,6 +494,20 @@ def admin():
     )
 
 
+@app.route("/internal/net-diag", methods=["GET"])
+def net_diag():
+    """Diagnóstico temporário: testa se o proxy de saída do PythonAnywhere
+    (que restringe destinos no plano grátis) deixa alcançar discord.com."""
+    check_auth = request.headers.get("Authorization", "") == f"Bearer {BOT_INTERNAL_SECRET}"
+    if not BOT_INTERNAL_SECRET or not check_auth:
+        abort(401)
+    try:
+        with urllib.request.urlopen("https://discord.com/api/v10/gateway", timeout=10) as resp:
+            return jsonify({"reachable": True, "status": resp.status})
+    except Exception as e:
+        return jsonify({"reachable": False, "error": str(e)})
+
+
 @app.route("/admin/discord-roles/backfill", methods=["POST"])
 @login_required
 def backfill_discord_roles():
