@@ -46,7 +46,7 @@ function sortMangas(mangas, sort) {
     if (!la && !lb) return 0;
     if (!la) return 1;
     if (!lb) return -1;
-    return lb.releaseDate.localeCompare(la.releaseDate);
+    return (lb.releaseDate || "").localeCompare(la.releaseDate || "");
   });
 }
 

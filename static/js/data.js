@@ -70,7 +70,7 @@ function getRecentUpdates(mangas, limit) {
     });
   });
   updates.sort((a, b) => {
-    const byDate = b.chapter.releaseDate.localeCompare(a.chapter.releaseDate);
+    const byDate = (b.chapter.releaseDate || "").localeCompare(a.chapter.releaseDate || "");
     return byDate !== 0 ? byDate : b.chapter.number - a.chapter.number;
   });
   return updates.slice(0, limit || 12);
