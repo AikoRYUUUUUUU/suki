@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Comentários — Suki</title>
+<title>Comentários — {{ manga_title }} — Suki</title>
 <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='assets/logo.svg') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
@@ -23,7 +23,7 @@
 <div class="admin-shell wide">
   <div class="admin-header">
     <div>
-      <p class="eyebrow">Moderação</p>
+      <p class="eyebrow">{{ manga_title }}</p>
       <h1>Comentários</h1>
       <p class="admin-hint">Publicados na hora, sem aprovação prévia — exclua aqui o que for indesejado.</p>
     </div>
@@ -35,23 +35,38 @@
         {% for c in comments %}
           <div class="manga-list-row">
             <div class="info">
-              <h3>{{ c.body }}</h3>
-              <p class="meta">
-                {{ c.author_name }} · <a href="{{ url_for('manga_page', id=c.manga_id) }}">{{ c.manga_title }}</a>
-                · {{ c.created_at[:10] }} · score {{ c.score }}
-                {% if c.parent_id %}· resposta a #{{ c.parent_id }}{% endif %}
-              </p>
+              <h3>{{ c.author_name }}</h3>
+              <p class="meta">{{ c.created_at[:10] }} · score {{ c.score }}</p>
+              <p class="meta">{{ c.body }}</p>
             </div>
             <div class="actions">
               <button type="button" class="btn btn-danger js-delete-trigger"
                       data-target-form="delete-comment-{{ c.id }}"
                       data-name="comentário de {{ c.author_name }}"
-                      data-detail="{{ 'e todas as respostas a ele' if not c.parent_id else '' }}">Excluir</button>
-              <form id="delete-comment-{{ c.id }}" action="{{ url_for('delete_comment_route', comment_id=c.id) }}" method="post" style="display:none;">
+                      data-detail="{{ 'e %d resposta(s) a ele'|format(c.replies|length) if c.replies else '' }}">Excluir</button>
+              <form id="delete-comment-{{ c.id }}" action="{{ url_for('delete_comment_route', manga_id=manga_id, comment_id=c.id) }}" method="post" style="display:none;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               </form>
             </div>
           </div>
+          {% for r in c.replies %}
+            <div class="manga-list-row comment-reply-row">
+              <div class="info">
+                <h3>↳ {{ r.author_name }}</h3>
+                <p class="meta">{{ r.created_at[:10] }} · score {{ r.score }}</p>
+                <p class="meta">{{ r.body }}</p>
+              </div>
+              <div class="actions">
+                <button type="button" class="btn btn-danger js-delete-trigger"
+                        data-target-form="delete-comment-{{ r.id }}"
+                        data-name="resposta de {{ r.author_name }}"
+                        data-detail="">Excluir</button>
+                <form id="delete-comment-{{ r.id }}" action="{{ url_for('delete_comment_route', manga_id=manga_id, comment_id=r.id) }}" method="post" style="display:none;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                </form>
+              </div>
+            </div>
+          {% endfor %}
         {% endfor %}
       </div>
     {% else %}

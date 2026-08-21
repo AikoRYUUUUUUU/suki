@@ -27,7 +27,6 @@
       <h1>Mangás</h1>
     </div>
     <div style="display:flex; gap:10px;">
-      <a class="btn btn-ghost" href="{{ url_for('admin_comments') }}">Comentários</a>
       <a class="btn btn-primary" href="{{ url_for('new_manga_form') }}">Adicionar mangá</a>
       <form action="{{ url_for('logout') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -78,6 +77,7 @@
               <a class="btn btn-ghost" href="{{ url_for('chapters_list', manga_id=m.id) }}">Capítulos</a>
               <a class="btn btn-ghost" href="{{ url_for('new_chapter_form', manga_id=m.id) }}">+ Capítulo</a>
               <a class="btn btn-ghost" href="{{ url_for('bulk_chapters_form', manga_id=m.id) }}">+ Capítulos (.zip)</a>
+              <a class="btn btn-ghost" href="{{ url_for('manga_comments_admin', manga_id=m.id) }}">Comentários{{ " (%d)"|format(m.comment_count) if m.comment_count else "" }}</a>
               <button type="button" class="btn btn-danger js-delete-trigger"
                       data-target-form="delete-manga-{{ m.id }}"
                       data-name="{{ m.title }}"

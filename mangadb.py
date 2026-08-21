@@ -122,12 +122,15 @@ def get_groups():
 
 
 def get_dashboard_mangas():
+    """Subqueries em vez de dois LEFT JOIN (capítulos + comentários) na mesma
+    query - joinar duas relações um-pra-muitos ao mesmo tempo multiplicaria as
+    linhas (produto cartesiano) e inflaria os dois COUNT()."""
     conn = get_connection()
     rows = [dict(r) for r in conn.execute("""
-        SELECT m.id, m.title, m.status, m.cover, COUNT(c.id) AS chapter_count
+        SELECT m.id, m.title, m.status, m.cover,
+            (SELECT COUNT(*) FROM chapters c WHERE c.manga_id = m.id) AS chapter_count,
+            (SELECT COUNT(*) FROM comments cm WHERE cm.manga_id = m.id) AS comment_count
         FROM mangas m
-        LEFT JOIN chapters c ON c.manga_id = m.id
-        GROUP BY m.id
         ORDER BY m.title
     """)]
     conn.close()
@@ -900,19 +903,6 @@ def vote_comment(comment_id, voter_hash, value):
     finally:
         conn.close()
     return row["score"]
-
-
-def get_all_comments_admin():
-    conn = get_connection()
-    rows = [dict(r) for r in conn.execute("""
-        SELECT c.id, c.author_name, c.body, c.created_at, c.score, c.parent_id,
-               c.manga_id, m.title AS manga_title
-        FROM comments c
-        JOIN mangas m ON m.id = c.manga_id
-        ORDER BY c.created_at DESC
-    """)]
-    conn.close()
-    return rows
 
 
 def delete_comment(comment_id):

@@ -669,17 +669,24 @@ def migration_commit():
     abort(400)
 
 
-@app.route("/admin/comments", methods=["GET"])
+@app.route("/admin/mangas/<manga_id>/comments", methods=["GET"])
 @login_required
-def admin_comments():
-    return render_template("admin_comments.html", comments=mangadb.get_all_comments_admin())
+def manga_comments_admin(manga_id):
+    manga_title = mangadb.get_manga_title(manga_id)
+    if manga_title is None:
+        abort(404)
+    return render_template(
+        "admin_manga_comments.html",
+        manga_id=manga_id, manga_title=manga_title,
+        comments=mangadb.get_comments(manga_id),
+    )
 
 
-@app.route("/admin/comments/<int:comment_id>/delete", methods=["POST"])
+@app.route("/admin/mangas/<manga_id>/comments/<int:comment_id>/delete", methods=["POST"])
 @login_required
-def delete_comment_route(comment_id):
+def delete_comment_route(manga_id, comment_id):
     mangadb.delete_comment(comment_id)
-    return redirect(url_for("admin_comments"))
+    return redirect(url_for("manga_comments_admin", manga_id=manga_id))
 
 
 @app.route("/admin/mangas/<manga_id>/status", methods=["POST"])
