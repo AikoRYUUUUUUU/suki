@@ -123,7 +123,9 @@ def create_discord_role(manga_id, title):
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        # 30s porque o host gratuito do bot hiberna sem tráfego e leva um
+        # tempo pra acordar na primeira requisição.
+        with urllib.request.urlopen(req, timeout=30) as resp:
             return json.loads(resp.read()).get("role_id")
     except Exception as e:
         print(f"[discord bot] criação de cargo falhou: {e}")

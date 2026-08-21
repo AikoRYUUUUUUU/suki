@@ -25,6 +25,9 @@ def discord_request(method, path, body=None):
         headers={
             "Authorization": f"Bot {DISCORD_BOT_TOKEN}",
             "Content-Type": "application/json",
+            # Sem isso o Cloudflare na frente do discord.com barra o request
+            # (User-Agent genérico do urllib parece automação) com erro 1010.
+            "User-Agent": "SukiBot (https://sukimangas.pythonanywhere.com, 1.0)",
         },
     )
     with urllib.request.urlopen(req, timeout=10) as resp:
