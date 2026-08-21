@@ -33,6 +33,7 @@ GITHUB_WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET")
 WSGI_FILE_PATH = os.environ.get("WSGI_FILE_PATH")
 CUSDIS_APP_ID = os.environ.get("CUSDIS_APP_ID")
 CUSDIS_WEBHOOK_SECRET = os.environ.get("CUSDIS_WEBHOOK_SECRET")
+GOOGLE_SITE_VERIFICATION = os.environ.get("GOOGLE_SITE_VERIFICATION")
 
 SITE_DESCRIPTION = "Leia mangás e webtoons traduzidos em português, de graça e sem enrolação. Catálogo atualizado toda semana."
 
@@ -138,6 +139,7 @@ def index():
         meta_description=SITE_DESCRIPTION,
         canonical_url=absolute_url(url_for("index")),
         og_image=default_og_image(),
+        google_site_verification=GOOGLE_SITE_VERIFICATION,
     )
 
 
