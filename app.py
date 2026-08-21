@@ -34,8 +34,8 @@ GITHUB_WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET")
 WSGI_FILE_PATH = os.environ.get("WSGI_FILE_PATH")
 GOOGLE_SITE_VERIFICATION = os.environ.get("GOOGLE_SITE_VERIFICATION")
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
-BOT_BASE_URL = os.environ.get("BOT_BASE_URL")
-BOT_INTERNAL_SECRET = os.environ.get("BOT_INTERNAL_SECRET")
+DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
+DISCORD_GUILD_ID = os.environ.get("DISCORD_GUILD_ID")
 
 SITE_DESCRIPTION = "Leia mangás e webtoons traduzidos em português, de graça e sem enrolação. Catálogo atualizado toda semana."
 
@@ -107,28 +107,28 @@ def notify_discord(title, url, description, cover, role_id=None):
         print(f"[discord webhook] falhou: {e}")
 
 
-def create_discord_role(manga_id, title):
-    """Pede pro bot (processo separado, conectado ao Discord) criar o cargo de
-    'seguir esse mangá' e devolver o ID. Best-effort - se o bot não estiver
-    configurado ou estiver fora do ar, o mangá é criado normalmente sem cargo
-    (dá pra tentar de novo depois editando o mangá)."""
-    if not BOT_BASE_URL or not BOT_INTERNAL_SECRET:
+def create_discord_role(title):
+    """Cria direto na API do Discord o cargo de 'seguir esse mangá' e devolve o
+    ID. Best-effort - sem token configurado ou com o Discord fora do ar, o
+    mangá é criado normalmente sem cargo."""
+    if not DISCORD_BOT_TOKEN or not DISCORD_GUILD_ID:
         return None
-    body = json.dumps({"manga_id": manga_id, "title": title}).encode("utf-8")
+    body = json.dumps({"name": title[:100], "mentionable": True, "hoist": False}).encode("utf-8")
     req = urllib.request.Request(
-        BOT_BASE_URL.rstrip("/") + "/roles", data=body, method="POST",
+        f"https://discord.com/api/v10/guilds/{DISCORD_GUILD_ID}/roles", data=body, method="POST",
         headers={
+            "Authorization": f"Bot {DISCORD_BOT_TOKEN}",
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {BOT_INTERNAL_SECRET}",
+            # Sem isso o Cloudflare na frente do discord.com barra o request
+            # (User-Agent genérico do urllib parece automação) com erro 403.
+            "User-Agent": "SukiBot (https://sukimangas.pythonanywhere.com, 1.0)",
         },
     )
     try:
-        # 30s porque o host gratuito do bot hiberna sem tráfego e leva um
-        # tempo pra acordar na primeira requisição.
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            return json.loads(resp.read()).get("role_id")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read()).get("id")
     except Exception as e:
-        print(f"[discord bot] criação de cargo falhou: {e}")
+        print(f"[discord] criação de cargo falhou: {e}")
         return None
 
 
@@ -483,7 +483,7 @@ def admin():
     migration_pending_count = len(candidates["covers"]) + len(candidates["pages"])
     discord_roles_pending = (
         mangadb.get_mangas_without_discord_role()
-        if BOT_BASE_URL and BOT_INTERNAL_SECRET else []
+        if DISCORD_BOT_TOKEN and DISCORD_GUILD_ID else []
     )
     return render_template(
         "admin.html",
@@ -494,31 +494,13 @@ def admin():
     )
 
 
-@app.route("/internal/net-diag", methods=["GET"])
-def net_diag():
-    """Diagnóstico temporário: testa se o proxy de saída do PythonAnywhere
-    (que restringe destinos no plano grátis) deixa alcançar discord.com."""
-    check_auth = request.headers.get("Authorization", "") == f"Bearer {BOT_INTERNAL_SECRET}"
-    if not BOT_INTERNAL_SECRET or not check_auth:
-        abort(401)
-    req = urllib.request.Request(
-        "https://discord.com/api/v10/gateway",
-        headers={"User-Agent": "SukiBot (https://sukimangas.pythonanywhere.com, 1.0)"},
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return jsonify({"reachable": True, "status": resp.status})
-    except Exception as e:
-        return jsonify({"reachable": False, "error": str(e)})
-
-
 @app.route("/admin/discord-roles/backfill", methods=["POST"])
 @login_required
 def backfill_discord_roles():
     """Cria o cargo no Discord pros mangás que ficaram sem (cadastrados antes
-    do bot existir, ou que falharam na hora - bot fora do ar, etc)."""
+    do bot existir, ou que falharam na hora - Discord fora do ar, etc)."""
     for manga in mangadb.get_mangas_without_discord_role():
-        role_id = create_discord_role(manga["id"], manga["title"])
+        role_id = create_discord_role(manga["title"])
         if role_id:
             mangadb.set_manga_discord_role(manga["id"], role_id)
     return redirect(url_for("admin"))
@@ -810,7 +792,7 @@ def create_manga():
     except mangadb.ValidationError as e:
         return render_new_manga_error(str(e))
 
-    role_id = create_discord_role(manga_id, request.form.get("title"))
+    role_id = create_discord_role(request.form.get("title"))
     if role_id:
         mangadb.set_manga_discord_role(manga_id, role_id)
 
