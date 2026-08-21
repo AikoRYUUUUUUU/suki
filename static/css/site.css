@@ -339,7 +339,8 @@ img { max-width: 100%; display: block; }
 .shelf {
   padding: 64px 0;
 }
-#continuar { padding-bottom: 8px; }
+#continuar { padding-bottom: 0; }
+#lancamentos.tight-top { padding-top: 28px; }
 .empty-state {
   color: var(--gray);
   padding: 32px 4px;

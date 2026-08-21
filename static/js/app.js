@@ -33,6 +33,7 @@ function renderContinueReading(mangas) {
 
   document.getElementById("grid-continue").innerHTML = entries.map(e => continueCardHTML(e)).join("");
   document.getElementById("continuar").style.display = "";
+  document.getElementById("lancamentos").classList.add("tight-top");
 }
 
 function renderHeroManga(manga) {
