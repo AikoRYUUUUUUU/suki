@@ -34,12 +34,43 @@ WSGI_FILE_PATH = os.environ.get("WSGI_FILE_PATH")
 CUSDIS_APP_ID = os.environ.get("CUSDIS_APP_ID")
 CUSDIS_WEBHOOK_SECRET = os.environ.get("CUSDIS_WEBHOOK_SECRET")
 
+SITE_DESCRIPTION = "Leia mangás e webtoons traduzidos em português, de graça e sem enrolação. Catálogo atualizado toda semana."
+
 csrf = CSRFProtect(app)
 limiter = Limiter(get_remote_address, app=app, default_limits=[])
 app.jinja_env.globals["format_number"] = mangadb.format_number
 
 with app.app_context():
     mangadb.init_db()
+
+
+def truncate_words(text, limit):
+    """Corta no último espaço antes do limite, pra description de meta tag não
+    quebrar palavra no meio (motores de busca e redes sociais truncam sem isso)."""
+    if not text or len(text) <= limit:
+        return text or ""
+    cut = text[:limit].rsplit(" ", 1)[0]
+    return cut.rstrip(",.;:") + "…"
+
+
+def absolute_url(path):
+    """og:url/og:image precisam de URL absoluta - request.url_root já reflete
+    o esquema (http/https) e host reais da requisição, sem precisar fixar domínio."""
+    return request.url_root.rstrip("/") + path
+
+
+def default_og_image():
+    return absolute_url(url_for("static", filename="assets/og-banner.png"))
+
+
+def og_image_url(cover):
+    """Capas locais vêm de static_url() como caminho relativo (/static/...); as do
+    R2 já são https:// absolutas. og:image exige URL absoluta nos dois casos."""
+    if not cover:
+        return default_og_image()
+    if cover.startswith(("http://", "https://")):
+        return cover
+    return absolute_url(cover)
 
 
 CSP = (
@@ -101,30 +132,130 @@ def login_required(view):
 @app.route("/")
 @app.route("/index.html")
 def index():
-    return render_template("index.html", statuses=mangadb.MANGA_STATUSES)
+    return render_template(
+        "index.html",
+        statuses=mangadb.MANGA_STATUSES,
+        meta_description=SITE_DESCRIPTION,
+        canonical_url=absolute_url(url_for("index")),
+        og_image=default_og_image(),
+    )
 
 
 @app.route("/busca.html")
 def search_page():
+    q = request.args.get("q", "").strip()
+    meta_description = f'Resultados da busca por "{q}" — {SITE_DESCRIPTION}' if q else SITE_DESCRIPTION
     return render_template(
         "busca.html",
         statuses=mangadb.MANGA_STATUSES,
         tag_groups=mangadb.TAG_GROUPS,
         sensitive_tags=mangadb.SENSITIVE_TAGS,
-        q=request.args.get("q", "").strip(),
+        q=q,
         status=request.args.get("status", "").strip(),
         selected_tags=request.args.getlist("tags"),
+        meta_description=meta_description,
+        canonical_url=absolute_url(url_for("search_page")),
+        og_image=default_og_image(),
     )
 
 
 @app.route("/manga.html")
 def manga_page():
-    return render_template("manga.html", cusdis_app_id=CUSDIS_APP_ID)
+    manga = mangadb.get_manga_public(request.args.get("id", ""))
+    structured_data = None
+    if manga:
+        page_title = f"{manga['title']} — Suki"
+        meta_description = truncate_words(manga["synopsis"], 160) or SITE_DESCRIPTION
+        og_image = og_image_url(manga["cover"])
+        structured_data = {
+            "@context": "https://schema.org",
+            "@type": "Book",
+            "name": manga["title"],
+            "bookFormat": "https://schema.org/GraphicNovel",
+            "url": absolute_url(request.full_path.rstrip("?")),
+            "image": og_image,
+            "description": manga["synopsis"],
+            "genre": manga["genres"],
+        }
+        if manga["titleOriginal"]:
+            structured_data["alternateName"] = manga["titleOriginal"]
+        if manga["author"]:
+            structured_data["author"] = {"@type": "Person", "name": manga["author"]}
+        if manga["ratingCount"]:
+            structured_data["aggregateRating"] = {
+                "@type": "AggregateRating",
+                "ratingValue": manga["rating"],
+                "ratingCount": manga["ratingCount"],
+                "bestRating": 5,
+                "worstRating": 1,
+            }
+    else:
+        page_title = "Mangá não encontrado — Suki"
+        meta_description = SITE_DESCRIPTION
+        og_image = default_og_image()
+
+    return render_template(
+        "manga.html",
+        cusdis_app_id=CUSDIS_APP_ID,
+        manga=manga,
+        page_title=page_title,
+        meta_description=meta_description,
+        canonical_url=absolute_url(request.full_path.rstrip("?")),
+        og_image=og_image,
+        structured_data=structured_data,
+    )
 
 
 @app.route("/reader.html")
 def reader_page():
-    return render_template("reader.html")
+    chapter = mangadb.get_chapter_public(
+        request.args.get("id", ""), request.args.get("ch", "")
+    )
+    if chapter:
+        chapter_label = mangadb.format_number(chapter["number"])
+        page_title = f"Cap. {chapter_label} — {chapter['mangaTitle']} — Suki"
+        meta_description = f"Leia o capítulo {chapter_label} de {chapter['mangaTitle']} grátis em Suki."
+        og_image = og_image_url(chapter["cover"])
+    else:
+        page_title = "Leitor — Suki"
+        meta_description = SITE_DESCRIPTION
+        og_image = default_og_image()
+
+    return render_template(
+        "reader.html",
+        chapter=chapter,
+        page_title=page_title,
+        meta_description=meta_description,
+        canonical_url=absolute_url(request.full_path.rstrip("?")),
+        og_image=og_image,
+    )
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    body = (
+        "User-agent: *\n"
+        "Disallow: /admin\n"
+        "Disallow: /deploy\n"
+        "Disallow: /webhooks/\n\n"
+        f"Sitemap: {absolute_url(url_for('sitemap_xml'))}\n"
+    )
+    return app.response_class(body, mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    urls = [
+        absolute_url(url_for("index")),
+        absolute_url(url_for("search_page")),
+    ]
+    urls += [
+        absolute_url(url_for("manga_page")) + f"?id={manga_id}"
+        for manga_id in mangadb.get_all_manga_ids()
+    ]
+    xml_urls = "".join(f"<url><loc>{u}</loc></url>" for u in urls)
+    body = f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{xml_urls}</urlset>'
+    return app.response_class(body, mimetype="application/xml")
 
 
 @app.route("/api/mangas")

@@ -166,6 +166,78 @@ def get_manga_chapters(manga_id):
     return rows
 
 
+def get_all_manga_ids():
+    """Só os ids, pra montar o sitemap sem puxar o catálogo inteiro."""
+    conn = get_connection()
+    rows = [r["id"] for r in conn.execute("SELECT id FROM mangas ORDER BY id")]
+    conn.close()
+    return rows
+
+
+def get_manga_public(manga_id):
+    """Dados de um único mangá pra renderização server-side (título, sinopse, capa,
+    gêneros...) - usada pra montar <title>/meta/OG antes do JS assumir a página,
+    já que crawler de rede social (Discord, WhatsApp, Twitter) não executa JS."""
+    conn = get_connection()
+    m = conn.execute("""
+        SELECT mg.*, a.name AS author_name
+        FROM mangas mg
+        LEFT JOIN authors a ON a.id = mg.author_id
+        WHERE mg.id = ?
+    """, (manga_id,)).fetchone()
+    if not m:
+        conn.close()
+        return None
+
+    genres = [r["name"] for r in conn.execute("""
+        SELECT t.name FROM tags t
+        JOIN manga_tags mt ON mt.tag_id = t.id
+        WHERE mt.manga_id = ?
+        ORDER BY t.name
+    """, (manga_id,))]
+
+    chapter_count = conn.execute(
+        "SELECT COUNT(*) AS n FROM chapters WHERE manga_id = ?", (manga_id,)
+    ).fetchone()["n"]
+
+    conn.close()
+    return {
+        "id": m["id"],
+        "title": m["title"],
+        "titleOriginal": m["title_original"],
+        "author": m["author_name"],
+        "status": m["status"],
+        "year": m["year"],
+        "genres": genres,
+        "rating": effective_rating(m),
+        "ratingCount": m["rating_count"],
+        "cover": static_url(m["cover"]),
+        "synopsis": m["synopsis"],
+        "chapterCount": chapter_count,
+    }
+
+
+def get_chapter_public(manga_id, chapter_id):
+    """Título/capa do mangá + número/título do capítulo, pra meta/OG da página do leitor."""
+    conn = get_connection()
+    m = conn.execute(
+        "SELECT title, cover FROM mangas WHERE id = ?", (manga_id,)
+    ).fetchone()
+    c = conn.execute(
+        "SELECT number, title FROM chapters WHERE id = ? AND manga_id = ?",
+        (chapter_id, manga_id),
+    ).fetchone()
+    conn.close()
+    if not m or not c:
+        return None
+    return {
+        "mangaTitle": m["title"],
+        "cover": static_url(m["cover"]),
+        "number": c["number"],
+        "title": c["title"],
+    }
+
+
 def get_or_create_tag(conn, name):
     """Opera na conexão do chamador (nunca abre a própria) - assim fica dentro da mesma
     transação de quem está inserindo o mangá, evitando lock de escritor concorrente do

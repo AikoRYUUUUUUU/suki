@@ -3,7 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title id="page-title">Mangá — Suki</title>
+<title id="page-title">{{ page_title }}</title>
+<meta name="description" content="{{ meta_description }}">
+<link rel="canonical" href="{{ canonical_url }}">
+{% if not manga %}<meta name="robots" content="noindex">{% endif %}
+
+<meta property="og:type" content="book">
+<meta property="og:site_name" content="Suki">
+<meta property="og:title" content="{{ page_title }}">
+<meta property="og:description" content="{{ meta_description }}">
+<meta property="og:url" content="{{ canonical_url }}">
+<meta property="og:image" content="{{ og_image }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ page_title }}">
+<meta name="twitter:description" content="{{ meta_description }}">
+<meta name="twitter:image" content="{{ og_image }}">
+
+{% if structured_data %}
+<script type="application/ld+json">{{ structured_data | tojson }}</script>
+{% endif %}
+
 <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='assets/logo.svg') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
 </head>
