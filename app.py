@@ -501,8 +501,12 @@ def net_diag():
     check_auth = request.headers.get("Authorization", "") == f"Bearer {BOT_INTERNAL_SECRET}"
     if not BOT_INTERNAL_SECRET or not check_auth:
         abort(401)
+    req = urllib.request.Request(
+        "https://discord.com/api/v10/gateway",
+        headers={"User-Agent": "SukiBot (https://sukimangas.pythonanywhere.com, 1.0)"},
+    )
     try:
-        with urllib.request.urlopen("https://discord.com/api/v10/gateway", timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:
             return jsonify({"reachable": True, "status": resp.status})
     except Exception as e:
         return jsonify({"reachable": False, "error": str(e)})
