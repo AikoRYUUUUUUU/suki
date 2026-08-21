@@ -260,6 +260,11 @@ def sitemap_xml():
     return app.response_class(body, mimetype="application/xml")
 
 
+@app.route("/google88b36d17adab0dc2.html")
+def google_site_verification_file():
+    return app.response_class("google-site-verification: google88b36d17adab0dc2.html\n", mimetype="text/html")
+
+
 @app.route("/api/mangas")
 def api_mangas():
     return jsonify({"mangas": mangadb.get_all_mangas_full()})
