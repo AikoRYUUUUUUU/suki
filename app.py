@@ -691,6 +691,19 @@ def handle_slash_command(command):
             "embeds": [manga_embed(manga, title=f"🎲 {manga['title']}")], "flags": 64,
         }})
 
+    if name == "help":
+        embed = {
+            "title": "📖 Comandos da Suki",
+            "color": 0xB7472A,
+            "fields": [
+                {"name": "/procurar nome:<texto>", "value": "Busca um mangá pelo nome no catálogo."},
+                {"name": "/aleatorio", "value": "Sugere um mangá aleatório do catálogo."},
+                {"name": "/help", "value": "Mostra essa lista de comandos."},
+            ],
+            "footer": {"text": "Equipe Suki Mangás"},
+        }
+        return jsonify({"type": 4, "data": {"embeds": [embed], "flags": 64}})
+
     return jsonify({"type": 4, "data": {"content": "Comando não reconhecido.", "flags": 64}})
 
 
