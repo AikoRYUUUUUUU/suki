@@ -17,7 +17,7 @@ TAG_GROUPS = {
         "Terror", "Mistério", "Suspense", "Romance", "Slice of Life", "Sobrenatural",
         "Psicológico", "Esporte", "Histórico", "Mecha", "Isekai", "Escolar",
     ],
-    "Formato": ["Webtoon"],
+    "Formato": ["Mangá", "Manhua", "Manhwa", "Webtoon"],
     "Demografia": ["Shounen", "Shoujo", "Seinen", "Josei"],
     "Relacionamento": ["Yaoi", "Yuri", "Harém"],
     "Conteúdo sensível": ["Ecchi", "Smut", "Adulto (18+)", "Mature"],

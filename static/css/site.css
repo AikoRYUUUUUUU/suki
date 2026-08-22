@@ -1109,7 +1109,7 @@ body.reader-body {
   flex-direction: column;
   gap: 18px;
 }
-.volunteer-form label {
+.volunteer-form label:not(.tag-chip) {
   display: flex;
   flex-direction: column;
   gap: 6px;
