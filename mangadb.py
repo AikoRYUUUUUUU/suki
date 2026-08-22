@@ -962,9 +962,11 @@ def vote_comment(comment_id, voter_hash, value):
     return row["score"]
 
 
-def delete_comment(comment_id):
-    """ON DELETE CASCADE cuida das respostas (parent_id) e dos votos junto."""
+def delete_comment(manga_id, comment_id):
+    """ON DELETE CASCADE cuida das respostas (parent_id) e dos votos junto.
+    Exige manga_id pra garantir que o admin só apaga comentários do mangá que
+    está de fato vendo, mesmo que o comment_id na URL seja adulterado."""
     conn = get_connection()
-    conn.execute("DELETE FROM comments WHERE id = ?", (comment_id,))
+    conn.execute("DELETE FROM comments WHERE id = ? AND manga_id = ?", (comment_id, manga_id))
     conn.commit()
     conn.close()

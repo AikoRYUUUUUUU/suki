@@ -426,6 +426,7 @@ def google_site_verification_file():
 
 
 @app.route("/api/mangas")
+@limiter.limit("60 per minute")
 def api_mangas():
     return jsonify({"mangas": mangadb.get_all_mangas_full()})
 
@@ -455,6 +456,7 @@ COMMENT_BODY_MAX = 2000
 
 
 @app.route("/api/mangas/<manga_id>/comments", methods=["GET"])
+@limiter.limit("60 per minute")
 def list_comments(manga_id):
     if not mangadb.manga_exists(manga_id):
         abort(404)
@@ -560,7 +562,7 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "")
         password = request.form.get("password", "")
-        if username == ADMIN_USERNAME and check_password_hash(ADMIN_PASSWORD_HASH, password):
+        if hmac.compare_digest(username, ADMIN_USERNAME) and check_password_hash(ADMIN_PASSWORD_HASH, password):
             session.clear()
             session["is_admin"] = True
             next_url = request.args.get("next")
@@ -802,31 +804,38 @@ def presign_upload():
     else:
         key = f"pages/{manga_id}/{secrets.token_hex(8)}.{ext}"
 
+    content_type = r2.CONTENT_TYPES[ext]
     try:
-        upload_url = r2.presign_put(key)
+        upload_url = r2.presign_put(key, content_type)
     except r2.R2NotConfigured as e:
         return jsonify({"error": str(e)}), 503
 
     return jsonify({
         "upload_url": upload_url,
         "public_url": r2.public_url(key),
-        "content_type": r2.CONTENT_TYPES[ext],
+        "content_type": content_type,
         "key": key,
     })
 
 
-@app.route("/admin/r2/presign-delete", methods=["POST"])
+@app.route("/admin/mangas/<manga_id>/r2/presign-delete", methods=["POST"])
 @login_required
-def presign_delete():
-    """Devolve URLs DELETE pré-assinadas pras URLs informadas que forem
-    hospedadas no nosso bucket R2 (ignora caminhos locais legados)."""
+def presign_delete(manga_id):
+    """Devolve URLs DELETE pré-assinadas pras URLs informadas, restrito às
+    que forem de fato a capa ou uma página de capítulo desse mangá - impede
+    que uma URL adulterada no cliente apague objeto de outro mangá no R2."""
+    if not mangadb.manga_exists(manga_id):
+        abort(404)
     data = request.get_json(silent=True) or {}
     urls = data.get("urls")
     if not isinstance(urls, list):
         abort(400)
 
+    allowed = set(_manga_r2_urls(manga_id))
     result = {}
     for url in urls:
+        if url not in allowed:
+            continue
         key = r2.key_from_public_url(url)
         if key is None:
             continue
@@ -967,7 +976,7 @@ def manga_comments_admin(manga_id):
 @app.route("/admin/mangas/<manga_id>/comments/<int:comment_id>/delete", methods=["POST"])
 @login_required
 def delete_comment_route(manga_id, comment_id):
-    mangadb.delete_comment(comment_id)
+    mangadb.delete_comment(manga_id, comment_id)
     return redirect(url_for("manga_comments_admin", manga_id=manga_id))
 
 

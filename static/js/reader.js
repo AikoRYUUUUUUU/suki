@@ -31,7 +31,7 @@ function showAgeGate(manga, onConfirm) {
   overlay.innerHTML = `
     <div class="age-gate-box">
       <p class="age-gate-warning">⚠ Conteúdo +18</p>
-      <p class="age-gate-text">"${manga.title}" contém material para maiores de 18 anos. Confirme que você tem 18 anos ou mais para continuar.</p>
+      <p class="age-gate-text">"${escapeHtml(manga.title)}" contém material para maiores de 18 anos. Confirme que você tem 18 anos ou mais para continuar.</p>
       <div class="age-gate-actions">
         <button type="button" class="btn btn-primary" id="age-gate-confirm">Sim, tenho 18 anos ou mais</button>
         <button type="button" class="btn btn-ghost" id="age-gate-leave">Sair</button>
@@ -131,7 +131,7 @@ function goToChapterId(chapterId, landOnLastPage) {
 function populateChapterSelects() {
   const sorted = [...state.manga.chapters].sort((a, b) => a.number - b.number);
   const optionsHTML = sorted
-    .map(c => `<option value="${c.id}"${c.id === state.chapter.id ? " selected" : ""}>Cap. ${c.number} — ${c.title}</option>`)
+    .map(c => `<option value="${c.id}"${c.id === state.chapter.id ? " selected" : ""}>Cap. ${c.number} — ${escapeHtml(c.title)}</option>`)
     .join("");
   document.querySelectorAll(".chapter-select").forEach(sel => {
     sel.innerHTML = optionsHTML;

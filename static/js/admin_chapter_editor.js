@@ -153,7 +153,7 @@
     newPagesInput.value = JSON.stringify(newPagesData);
 
     if (removedExistingUrls.length) {
-      await window.AdminUploads.presignDeleteUrls(removedExistingUrls);
+      await window.AdminUploads.presignDeleteUrls(removedExistingUrls, mangaId);
     }
 
     form.submit();

@@ -18,9 +18,9 @@ function continueCardHTML(entry) {
   return `
     <a class="card-manga" href="reader.html?id=${entry.id}&ch=${entry.lastChapterId}">
       <div class="cover-frame">
-        <img src="${entry.cover}" alt="Capa de ${entry.title}" loading="lazy">
+        <img src="${entry.cover}" alt="Capa de ${escapeHtml(entry.title)}" loading="lazy">
       </div>
-      <h3>${entry.title}</h3>
+      <h3>${escapeHtml(entry.title)}</h3>
       <p class="meta">Continuar — Cap. ${entry.lastChapterNumber}</p>
     </a>
   `;
@@ -39,9 +39,9 @@ function favoriteCardHTML(entry) {
   return `
     <a class="card-manga" href="manga.html?id=${entry.id}">
       <div class="cover-frame">
-        <img src="${entry.cover}" alt="Capa de ${entry.title}" loading="lazy">
+        <img src="${entry.cover}" alt="Capa de ${escapeHtml(entry.title)}" loading="lazy">
       </div>
-      <h3>${entry.title}</h3>
+      <h3>${escapeHtml(entry.title)}</h3>
     </a>
   `;
 }
@@ -59,9 +59,9 @@ function updateCardHTML({ manga, chapter }) {
   return `
     <a class="card-manga" href="reader.html?id=${manga.id}&ch=${chapter.id}">
       <div class="cover-frame">
-        <img src="${manga.cover}" alt="Capa de ${manga.title}" loading="lazy">
+        <img src="${manga.cover}" alt="Capa de ${escapeHtml(manga.title)}" loading="lazy">
       </div>
-      <h3>${manga.title}</h3>
+      <h3>${escapeHtml(manga.title)}</h3>
       <p class="meta">Cap. ${chapter.number} · ${formatDate(chapter.releaseDate)}</p>
     </a>
   `;
@@ -79,7 +79,7 @@ function renderHeroManga(manga) {
   document.getElementById("hero-manga-title").textContent = manga.title;
   document.getElementById("hero-synopsis").textContent = manga.synopsis;
   document.getElementById("hero-tags").innerHTML = (manga.genres || [])
-    .map(g => `<span class="pill">${g}</span>`).join("");
+    .map(g => `<span class="pill">${escapeHtml(g)}</span>`).join("");
   document.getElementById("hero-cover-img").src = manga.cover;
   document.getElementById("hero-cover-img").alt = `Capa de ${manga.title}`;
   document.getElementById("hero-cover-btn").href = `manga.html?id=${manga.id}`;

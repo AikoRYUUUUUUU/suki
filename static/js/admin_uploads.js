@@ -70,11 +70,11 @@
     }
   }
 
-  async function presignDeleteUrls(urls) {
+  async function presignDeleteUrls(urls, mangaId) {
     const list = (urls || []).filter(Boolean);
-    if (!list.length) return;
+    if (!list.length || !mangaId) return;
     try {
-      const res = await fetch("/admin/r2/presign-delete", {
+      const res = await fetch(`/admin/mangas/${mangaId}/r2/presign-delete`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
         body: JSON.stringify({ urls: list }),

@@ -16,8 +16,8 @@ async function renderMangaPage() {
   document.getElementById("synopsis").textContent = manga.synopsis;
 
   document.getElementById("genres-row").innerHTML = [
-    `<span class="pill accent">${manga.status}</span>`,
-    ...manga.genres.map(g => `<span class="pill">${g}</span>`)
+    `<span class="pill accent">${escapeHtml(manga.status)}</span>`,
+    ...manga.genres.map(g => `<span class="pill">${escapeHtml(g)}</span>`)
   ].join("");
 
   document.getElementById("stat-chapters").textContent = manga.chapters.length;
@@ -56,7 +56,7 @@ async function renderMangaPage() {
       <a class="chapter-row${isChapterRead(manga.id, c.id) ? " is-read" : ""}" href="reader.html?id=${manga.id}&ch=${c.id}">
         <div class="left">
           <span class="chapter-num">${String(c.number).padStart(2, "0")}</span>
-          <span class="ch-title">${c.title}</span>
+          <span class="ch-title">${escapeHtml(c.title)}</span>
         </div>
         <span class="ch-date">${formatDate(c.releaseDate)}</span>
       </a>
@@ -155,12 +155,6 @@ function markCommentVoted(id) {
   const voted = getVotedComments();
   voted.add(id);
   localStorage.setItem(COMMENT_VOTED_KEY, JSON.stringify([...voted]));
-}
-
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str == null ? "" : String(str);
-  return div.innerHTML;
 }
 
 function initComments(mangaId) {

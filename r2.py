@@ -92,17 +92,22 @@ def _signing_key(secret_key, date_stamp, region, service):
 
 
 def sign_request(method, host, canonical_uri, query_params, amz_date, date_stamp,
-                  access_key, secret_key, region, service):
+                  access_key, secret_key, region, service, extra_headers=None):
     """Núcleo puro do SigV4 (sem env vars/tempo real) - separado de `_presign` só
     pra poder ser testado contra o vetor de teste oficial da AWS
     (scripts/test_r2_sigv4.py), sem depender de credenciais reais nem do
-    relógio do sistema. Devolve (canonical_request, string_to_sign, signature)."""
+    relógio do sistema. Devolve (canonical_request, string_to_sign, signature).
+    `extra_headers` (dict, nomes em minúsculo) entra assinado além de `host` -
+    ex.: content-type, pra travar o presign PUT num tipo de arquivo específico.
+    Opcional e por padrão vazio, então o vetor de teste da AWS (que só assina
+    `host`) continua batendo sem mudança."""
+    headers = {"host": host, **(extra_headers or {})}
     credential_scope = f"{date_stamp}/{region}/{service}/aws4_request"
     canonical_querystring = "&".join(
         f"{quote(k, safe='')}={quote(v, safe='')}" for k, v in sorted(query_params.items())
     )
-    canonical_headers = f"host:{host}\n"
-    signed_headers = "host"
+    canonical_headers = "".join(f"{k}:{v}\n" for k, v in sorted(headers.items()))
+    signed_headers = ";".join(sorted(headers))
     payload_hash = "UNSIGNED-PAYLOAD"
 
     canonical_request = "\n".join([
@@ -118,7 +123,7 @@ def sign_request(method, host, canonical_uri, query_params, amz_date, date_stamp
     return canonical_request, string_to_sign, signature
 
 
-def _presign(method, key, expires_seconds):
+def _presign(method, key, expires_seconds, extra_headers=None):
     cfg = _config()
     host = f"{cfg['account_id']}.r2.cloudflarestorage.com"
     now = datetime.now(timezone.utc)
@@ -127,16 +132,17 @@ def _presign(method, key, expires_seconds):
     credential_scope = f"{date_stamp}/{REGION}/{SERVICE}/aws4_request"
 
     canonical_uri = "/" + quote(f"{cfg['bucket']}/{key}", safe="/-_.~")
+    signed_header_names = ";".join(sorted({"host", *(extra_headers or {})}))
     query_params = {
         "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
         "X-Amz-Credential": f"{cfg['access_key']}/{credential_scope}",
         "X-Amz-Date": amz_date,
         "X-Amz-Expires": str(expires_seconds),
-        "X-Amz-SignedHeaders": "host",
+        "X-Amz-SignedHeaders": signed_header_names,
     }
     _, _, signature = sign_request(
         method, host, canonical_uri, query_params, amz_date, date_stamp,
-        cfg["access_key"], cfg["secret_key"], REGION, SERVICE,
+        cfg["access_key"], cfg["secret_key"], REGION, SERVICE, extra_headers=extra_headers,
     )
     canonical_querystring = "&".join(
         f"{quote(k, safe='')}={quote(v, safe='')}" for k, v in sorted(query_params.items())
@@ -144,8 +150,13 @@ def _presign(method, key, expires_seconds):
     return f"https://{host}{canonical_uri}?{canonical_querystring}&X-Amz-Signature={signature}"
 
 
-def presign_put(key, expires_seconds=600):
-    return _presign("PUT", key, expires_seconds)
+def presign_put(key, content_type, expires_seconds=600):
+    """Content-Type entra no conjunto de headers assinados - a URL só serve
+    pra subir um arquivo com exatamente esse Content-Type, então mesmo que a
+    URL vaze ela não pode ser reaproveitada pra subir outro tipo de conteúdo
+    na mesma key. O navegador já manda esse mesmo header no PUT real
+    (sniffAndPresign em admin_uploads.js), então não muda nada pro fluxo normal."""
+    return _presign("PUT", key, expires_seconds, extra_headers={"content-type": content_type})
 
 
 def presign_delete(key, expires_seconds=600):

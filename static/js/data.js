@@ -39,6 +39,14 @@ function qs(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
+// dados vêm do banco (admin ou autofill do AniList) e acabam indo pra innerHTML
+// em vários lugares - escapa antes de interpolar pra evitar XSS armazenado.
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : String(str);
+  return div.innerHTML;
+}
+
 const ADULT_TAGS = new Set(["Adulto (18+)", "Smut", "Mature"]);
 
 function isAdultManga(m) {
@@ -91,13 +99,13 @@ function mangaCardHTML(m) {
   return `
     <a class="card-manga" href="manga.html?id=${m.id}">
       <div class="cover-frame">
-        <img src="${m.cover}" alt="Capa de ${m.title}" loading="lazy">
+        <img src="${m.cover}" alt="Capa de ${escapeHtml(m.title)}" loading="lazy">
         <div class="cover-badges">
-          <span class="badge-status">${m.status}</span>
+          <span class="badge-status">${escapeHtml(m.status)}</span>
           ${isAdultManga(m) ? '<span class="badge-adult">+18</span>' : ""}
         </div>
       </div>
-      <h3>${m.title}</h3>
+      <h3>${escapeHtml(m.title)}</h3>
       ${latest ? `
         <p class="latest-chapter">Cap. ${latest.number}${isNew ? ' <span class="badge-new">NOVO</span>' : ""}</p>
       ` : ""}

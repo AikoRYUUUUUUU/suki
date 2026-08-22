@@ -21,7 +21,7 @@
 
       const oldCover = form.dataset.oldCover;
       if (oldCover) {
-        await window.AdminUploads.presignDeleteUrls([oldCover]);
+        await window.AdminUploads.presignDeleteUrls([oldCover], form.dataset.mangaId);
       }
       form.submit();
     } catch (err) {
