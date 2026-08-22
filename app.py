@@ -274,6 +274,16 @@ def search_page():
     )
 
 
+@app.route("/atualizacoes.html")
+def updates_page():
+    return render_template(
+        "atualizacoes.html",
+        meta_description="Veja o que mudou recentemente na Suki: layout, funcionalidades e novidades.",
+        canonical_url=absolute_url(url_for("updates_page")),
+        og_image=default_og_image(),
+    )
+
+
 @app.route("/trabalhe-conosco.html", methods=["GET", "POST"])
 @limiter.limit("3 per hour", methods=["POST"])
 def volunteer_form():
@@ -410,6 +420,7 @@ def sitemap_xml():
     urls = [
         absolute_url(url_for("index")),
         absolute_url(url_for("search_page")),
+        absolute_url(url_for("updates_page")),
     ]
     urls += [
         absolute_url(url_for("manga_page")) + f"?id={manga_id}"

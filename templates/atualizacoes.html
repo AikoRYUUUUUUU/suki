@@ -3,19 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trabalhe conosco — Suki</title>
+<title>Atualizações — Suki</title>
 <meta name="description" content="{{ meta_description }}">
 <link rel="canonical" href="{{ canonical_url }}">
-<meta name="robots" content="noindex, follow">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Suki">
-<meta property="og:title" content="Trabalhe conosco — Suki">
+<meta property="og:title" content="Atualizações — Suki">
 <meta property="og:description" content="{{ meta_description }}">
 <meta property="og:url" content="{{ canonical_url }}">
 <meta property="og:image" content="{{ og_image }}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Trabalhe conosco — Suki">
+<meta name="twitter:title" content="Atualizações — Suki">
 <meta name="twitter:description" content="{{ meta_description }}">
 <meta name="twitter:image" content="{{ og_image }}">
 
@@ -46,64 +45,57 @@
 
 <section class="shelf">
   <div class="wrap wrap-narrow">
-    <p class="eyebrow">Equipe</p>
-    <h1 class="section-title">Trabalhe conosco</h1>
-    <p class="volunteer-intro">
-      A Suki é feita por voluntários. Se você quer ajudar com tradução, limpeza (redraw) ou
-      diagramação, deixa seus dados aqui embaixo — a gente te chama no Discord.
+    <p class="eyebrow">Novidades</p>
+    <h1 class="section-title">Atualizações</h1>
+    <p class="updates-intro">
+      O que mudou por aqui recentemente — layout, funcionalidades, coisas novas pra você usar.
     </p>
 
-    {% if sent %}
-      <div class="volunteer-sent">
-        <p>✅ Candidatura enviada! Fica de olho no Discord — a gente chama por lá.</p>
-      </div>
-    {% else %}
-      <form class="volunteer-form" method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="text" name="website" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <div class="updates-list">
 
-        {% if error %}<p class="volunteer-error">{{ error }}</p>{% endif %}
+      <div class="update-group">
+        <p class="update-date">22 de agosto de 2026</p>
 
-        <label>
-          <span>Nome</span>
-          <input type="text" name="name" maxlength="80" required>
-        </label>
-
-        <label>
-          <span>Idade</span>
-          <input type="number" name="age" min="10" max="100" required>
-        </label>
-
-        <label>
-          <span>Discord (seu nick, pra gente chamar você)</span>
-          <input type="text" name="discord_handle" maxlength="60" placeholder="seunick" required>
-        </label>
-
-        <div class="tag-picker">
-          <p class="tag-group-title">Área de interesse</p>
-          <div class="tag-options">
-            {% for a in areas %}
-              <label class="tag-chip">
-                <input type="checkbox" name="areas" value="{{ a }}">
-                {{ a }}
-              </label>
-            {% endfor %}
-          </div>
+        <div class="update-entry">
+          <h3>Busca mais fácil no celular</h3>
+          <p>O ícone de busca agora fica ao lado do menu no celular, em vez de solto no meio da barra — mais fácil de achar e tocar.</p>
         </div>
 
-        <label>
-          <span>Disponibilidade (horas por semana, aproximado)</span>
-          <input type="text" name="availability" maxlength="60" placeholder="ex: 5h/semana" required>
-        </label>
+        <div class="update-entry">
+          <h3>Novos formatos nos filtros</h3>
+          <p>Mangá, Manhua e Manhwa agora são opções de formato na busca, além de Webtoon.</p>
+        </div>
+      </div>
 
-        <label>
-          <span>Experiência anterior (opcional - não precisa de portfólio)</span>
-          <textarea name="experience" maxlength="1000"></textarea>
-        </label>
+      <div class="update-group">
+        <p class="update-date">21 de agosto de 2026</p>
 
-        <button type="submit" class="btn btn-primary">Enviar candidatura</button>
-      </form>
-    {% endif %}
+        <div class="update-entry">
+          <h3>Comentários renovados</h3>
+          <p>Novo sistema de comentários: dá pra responder, curtir e descurtir. Mais rápido e mais estável que o anterior.</p>
+        </div>
+
+        <div class="update-entry">
+          <h3>Aviso por mangá no Discord</h3>
+          <p>No nosso Discord agora dá pra escolher de quais mangás você quer receber aviso quando sai capítulo novo, em vez de um aviso geral pra tudo.</p>
+        </div>
+      </div>
+
+      <div class="update-group">
+        <p class="update-date">20 de agosto de 2026</p>
+
+        <div class="update-entry">
+          <h3>Favoritos, avaliações e lançamentos</h3>
+          <p>Já dá pra favoritar mangás, avaliar com estrelas, acompanhar um feed com os lançamentos mais recentes e ver sugestões de mangás parecidos.</p>
+        </div>
+
+        <div class="update-entry">
+          <h3>Leitor com navegação melhor</h3>
+          <p>Seletor de capítulo e setas de avançar/voltar agora aparecem no topo e no rodapé do leitor, não só em um lugar.</p>
+        </div>
+      </div>
+
+    </div>
   </div>
 </section>
 

@@ -1149,3 +1149,41 @@ body.reader-body {
   .volunteer-form input[type="number"],
   .volunteer-form textarea { font-size: 16px; }
 }
+
+/* ---------- atualizações ---------- */
+.updates-intro {
+  color: var(--paper-dim);
+  max-width: 60ch;
+  margin-bottom: 36px;
+}
+.updates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+.update-group + .update-group {
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+.update-date {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 14px;
+}
+.update-entry + .update-entry { margin-top: 18px; }
+.update-entry h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  margin: 0 0 6px;
+  color: var(--paper);
+}
+.update-entry p {
+  color: var(--paper-dim);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 62ch;
+}
