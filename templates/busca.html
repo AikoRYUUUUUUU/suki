@@ -41,20 +41,22 @@
         {% endfor %}
       </select>
     </form>
-    <button type="button" class="search-toggle" id="search-toggle" aria-label="Buscar" aria-expanded="false" aria-controls="topbar-search">
-      <svg viewBox="0 0 20 20" aria-hidden="true">
-        <path d="M13.61 12.2h-.7l-.25-.24a5.8 5.8 0 1 0-.62.62l.24.25v.7l4.46 4.45 1.33-1.33-4.46-4.45zm-5.35 0a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/>
-      </svg>
-    </button>
     <nav class="nav-links" id="nav-links">
       <a href="{{ url_for('search_page') }}">Biblioteca</a>
       <a href="/#lancamentos">Lançamentos</a>
       <a href="{{ url_for('search_page') }}#tag-filter">Gêneros</a>
       <a href="{{ url_for('volunteer_form') }}">Trabalhe conosco</a>
     </nav>
-    <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="nav-links">
-      <span></span><span></span><span></span>
-    </button>
+    <div class="topbar-actions">
+      <button type="button" class="search-toggle" id="search-toggle" aria-label="Buscar" aria-expanded="false" aria-controls="topbar-search">
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M13.61 12.2h-.7l-.25-.24a5.8 5.8 0 1 0-.62.62l.24.25v.7l4.46 4.45 1.33-1.33-4.46-4.45zm-5.35 0a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/>
+        </svg>
+      </button>
+      <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="nav-links">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
   </div>
 </header>
 

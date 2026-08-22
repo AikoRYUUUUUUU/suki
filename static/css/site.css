@@ -128,6 +128,12 @@ img { max-width: 100%; display: block; }
 
 /* botões só existem em telas estreitas (nav-toggle/search-toggle) - 40px em
    vez dos 34px do icon-btn "normal" porque aqui é alvo de toque, não de mouse */
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
 .search-toggle {
   display: none;
   align-items: center;
